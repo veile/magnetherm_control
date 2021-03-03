@@ -10,7 +10,7 @@ from dash_extensions import Download
 
 
 from app import colors
-from app.utils import get_files, matrix_sheet, current_state
+from app.utils import get_files, matrix_sheet
 
 
 def refresh():
@@ -56,7 +56,7 @@ def com_inputs():
             ),
             html.Br(),
             html.Div(style={'display': 'flex'}, children=[
-                html.Button('Test Connection', id='connect', n_clicks=0),
+                html.Button('Connect', id='connect', n_clicks=0),
                 daq.Indicator(id='connection_statusT', color=colors['off'], value=True,
                               style={'marginLeft': 10, 'marginTop': 10}),
                 daq.Indicator(id='connection_statusP', color=colors['off'], value=True,

@@ -76,31 +76,31 @@ def get_files(dir="./data/"):
             for f in files]
 
 
-def current_state():
-    file = "state.txt"
-    with open(file, 'r') as f:
-        state = f.read()
+# def current_state():
+#     file = "state.txt"
+#     with open(file, 'r') as f:
+#         state = f.read()
+#
+#     return "%s"%state
 
-    return "%s"%state
-
-def change_state(newstate, which):
-    file = "state.txt"
-    which = which.lower()
-    state = current_state().split('\n\n')
-
-    with open(file, 'w') as f:
-        if which == 'current':
-            state[0] = "**Current State**: "+newstate
-        elif which == 'freq':
-            state[1] = "**Frequency**: " + newstate
-
-        f.write('\n\n'.join(state))
+# def change_state(newstate, which):
+#     file = "state.txt"
+#     which = which.lower()
+#     state = current_state().split('\n\n')
+#
+#     with open(file, 'w') as f:
+#         if which == 'current':
+#             state[0] = "**Current State**: "+newstate
+#         elif which == 'freq':
+#             state[1] = "**Frequency**: " + newstate
+#
+#         f.write('\n\n'.join(state))
 
 
-def get_frequency():
-    state = current_state().split('\n\n')
-    frequency = state[1].split()[1]
-    return float(frequency)
+# def get_frequency():
+#     state = current_state().split('\n\n')
+#     frequency = state[1].split()[1]
+#     return float(frequency)
 
 
 def coil_current(f, power_current):
@@ -117,11 +117,11 @@ def field_to_current(field, f, r=18e-3, L=53e-3, N=18):
 
     return I/k2(f)
 
-def exposing():
-    with open('exposing.txt', 'r') as f:
-        status = f.read()
-    return status == 'True'
-
-def set_exposure(state):
-    with open('exposing.txt', 'w') as f:
-        f.write(str(bool(state)))
+# def exposing():
+#     with open('exposing.txt', 'r') as f:
+#         status = f.read()
+#     return status == 'True'
+#
+# def set_exposure(state):
+#     with open('exposing.txt', 'w') as f:
+#         f.write(str(bool(state)))

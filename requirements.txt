@@ -1,0 +1,9 @@
+numpy
+pandas
+pyserial
+dash
+dash-auth
+dash-daq
+dash_dual_listbox
+dash_extensions
+dash_table
