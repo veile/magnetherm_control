@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import time
 import numpy as np
 from zipfile import ZipFile
 from flask import send_from_directory
@@ -22,6 +23,7 @@ import app.utils as utils
 
 global tone
 global power
+exposing = False
 
 @app.server.route('/data/<path:path>')
 def serve_static(path):
@@ -58,9 +60,11 @@ index_page = html.Div(
 
                      comp.graph(),
                  ]),
-        # comp.tabs(),
+        comp.tabs(),
         comp.refresh(),
-        comp.quick_refresh()
+        comp.quick_refresh(),
+        html.Br(),
+        comp.stop()
     ]
 )
 
@@ -109,6 +113,8 @@ def display_page(pathname):
     [State('tone_com', 'value'), State('power_com', 'value')]
 )
 def connect(n_clicks, tone_port, power_port):
+    global tone, power
+
     c = {True: colors['on'], False: colors['off']}
     if n_clicks == 0:
         return '', c[False], c[False]
@@ -155,111 +161,104 @@ def refresh_options(n_intervals):
 #     else:
 #         return utils.current_state(), "Start", {'textColor': colors['on'], 'width': '200px'}
 #
-# @app.callback(
-#     Output('tab_content', 'children'),
-#     Input('main_tabs', 'value'))
-# def render_content(tab):
-#     if tab == 'tab_1':
-#         return comp.tuning()
-#     elif tab == 'tab_2':
-#         return comp.exposure()
-#
-#
-# @app.callback(
-#     [Output('freq_low', 'value'),
-#      Output('freq_high', 'value')],
-#     [Input('coil_type', 'value'),
-#      Input('cap_type',  'value')]
-# )
-# def set_frequency_range(coil_type, cap_type):
-#     f = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil_type) &
-#                         (utils.matrix_sheet['Capacitance [nF]'] == cap_type)].iloc[0]['Frequency [kHz]']
-#     return f-5, f+5
-#
-#
-# @app.callback(
-#     [Output('confirm_tuning', 'displayed'),
-#      Output('confirm_tuning', 'message')],
-#     Input('tune_button', 'n_clicks'),
-#     [State('coil_type', 'value'),
-#      State('cap_type', 'value')]
-# )
-# def confirm_tuning(clicks, coil, cap):
-#     if clicks == 0:
-#         return False, ""
-#     else:
-#         return True, "Make sure that the coil has %s turns and the capacitor is at %s nF"%(str(coil), str(cap))
-#
-#
-# @app.callback(
-#     Output('tune_div', 'children'),
-#     Input('confirm_tuning', 'submit_n_clicks'),
-#     [State('freq_low', 'value'),
-#      State('freq_high', 'value'),
-#      State('coil_type', 'value'),
-#      State('cap_type', 'value'),
-#      State('tone_com', 'value'),
-#      State('power_com', 'value')]
-# )
-# def tune(clicks, flow, fhigh, coil, cap, tone, power):
-#     if clicks == None:
-#         return "Click tune to tune system"
-#
-#     else:
-#         try:
-#             T = ToneGenerator(tone)
-#         except SerialException:
-#             utils.change_state("Tuning failed!", 'current')
-#             ports = utils.get_devices()
-#             if tone not in ports:
-#                 return "Tone Generator is not present on port %s" %tone
-#             else:
-#                 return "Cannot connect to the tone generator"
-#
-#         try:
-#             P = PowerSupply(power)
-#         except SerialException:
-#             utils.change_state("Tuning failed!", 'current')
-#             ports = utils.get_devices()
-#             if power not in ports:
-#                 return "Power Supply is not present on port %s" %tone
-#             else:
-#                 return "Cannot connect to the power supply"
-#
-#         V = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil) &
-#                          (utils.matrix_sheet['Capacitance [nF]'] == cap)].iloc[0]['Voltage [V]']
-#         I = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil) &
-#                          (utils.matrix_sheet['Capacitance [nF]'] == cap)].iloc[0]['Current [A]']
-#
-#         state = utils.current_state().split('\n\n')
-#         if state[0] == "**Current State**: Tuning the system":
-#             P.set_output('OFF')
-#             P.set(0,0)
-#             utils.change_state("Tuning was interrupted", 'current')
-#             utils.change_state("N/A", 'freq')
-#             # import dash
-#             # raise dash.exceptions.PreventUpdate
-#             return "Tuning interrupted!"
-#
-#     utils.change_state("Tuning the system", 'current')
-#     # import time
-#     # time.sleep(5)
-#     freqs = np.linspace(flow*1e3, fhigh*1e3, 11)
-#     current = scan(T, P, freqs, V / 3, I)
-#
-#     mx = np.argmax(current)
-#     freqs2 = np.linspace(freqs[mx] - 1e3, freqs[mx] + 1e3, 11, endpoint=True)
-#     current2 = scan(T, P, freqs2, V=40.9 / 3, I=20)
-#
-#     resonance = freqs2[np.argmax(current2)]
-#     T.frequency(resonance)
-#     utils.change_state('Tuning successful', 'current')
-#     utils.change_state('%.3f kHz'%(resonance*1e-3), 'freq')
-#     # change_state('Frequency set to %.3f kHz' %(resonance*1e-3))
-#     return "Resonance frequency at %.3f kHz" %(resonance*1e-3)
-#     # return 'Tuning test done'
-#
-#
+@app.callback(
+    Output('tab_content', 'children'),
+    Input('main_tabs', 'value'))
+def render_content(tab):
+    if tab == 'tab_1':
+        return comp.tuning()
+    elif tab == 'tab_2':
+        return comp.exposure()
+
+@app.callback(
+    [Output('freq_low', 'value'),
+     Output('freq_high', 'value')],
+    [Input('coil_type', 'value'),
+     Input('cap_type',  'value')]
+)
+def set_frequency_range(coil_type, cap_type):
+    f = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil_type) &
+                        (utils.matrix_sheet['Capacitance [nF]'] == cap_type)].iloc[0]['Frequency [kHz]']
+    return f-5, f+5
+
+
+@app.callback(
+    [Output('confirm_tuning', 'displayed'),
+     Output('confirm_tuning', 'message')],
+    Input('tune_button', 'n_clicks'),
+    [State('coil_type', 'value'),
+     State('cap_type', 'value')]
+)
+def confirm_tuning(clicks, coil, cap):
+    if clicks == 0:
+        return False, ""
+    else:
+        return True, "Make sure that the coil has %s turns and the capacitor is at %s nF"%(str(coil), str(cap))
+
+@app.callback(
+    Output('stop_button', 'value'),
+    Input('stop_button', 'n_clicks')
+)
+def stop_exposure(n):
+    if n == 0:
+        return 'STOP'
+
+    global exposing, power
+    power.set_default()
+    exposing = False
+    return 'STOP'
+
+@app.callback(
+    Output('tune_div', 'children'),
+    Input('confirm_tuning', 'submit_n_clicks'),
+    [State('freq_low', 'value'),
+     State('freq_high', 'value'),
+     State('coil_type', 'value'),
+     State('cap_type', 'value')]
+)
+def tune(clicks, flow, fhigh, coil, cap):
+    global exposing, tone, power
+    if clicks == None:
+        return "Click tune to tune system"
+
+    if 'tone' not in globals() or 'power' not in globals():
+        return "Please connect to devices."
+
+    if exposing:
+        exposing = False
+        power.set_default()
+        return 'Tuning stopped'
+
+    exposing = True
+
+    V = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil) &
+                     (utils.matrix_sheet['Capacitance [nF]'] == cap)].iloc[0]['Voltage [V]']
+    I = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil) &
+                     (utils.matrix_sheet['Capacitance [nF]'] == cap)].iloc[0]['Current [A]']
+
+    currents = []
+
+    freqs = np.linspace(flow*1e3, fhigh*1e3, 11)
+    tone.set_frequency(freqs[0])
+    tone.set_output('ON')
+
+    power.set(0, 0)
+    power.set_output('ON')
+
+    for f in freqs:
+        if not exposing:
+            return 'Tuning stopped'
+        print(f)
+        tone.set_frequency(f)
+        time.sleep(1)
+        reading = power.get_I()
+
+        currents.append(reading)
+
+    power.set_default()
+    return currents.__repr__()
+
+
 # #Exposure
 # # Gives circular dependence - in theory fine but gives clunky response
 # # @app.callback(

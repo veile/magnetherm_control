@@ -6,6 +6,7 @@ Created on Wed Sep  9 12:32:52 2020
 """
 import serial
 import time
+import random
 
 class WrongDeviceError(Exception):
     """Base class for wrong device"""
@@ -150,7 +151,7 @@ class PowerSupply():
 
     def set_default(self):
         self.set(0, 0)
-        self.set_output()
+        self.set_output('OFF')
 
     def status(self):
         V = self.get_V()
@@ -241,7 +242,7 @@ class dummy_PowerSupply():
         return self.comm('V1 ' + str(V))
 
     def get_I(self):
-        return self.comm('I1O?')
+        return random.randint(0, 5)
 
     def set_I(self, I):
         # Checks if input is allowed
@@ -285,6 +286,11 @@ class dummy_PowerSupply():
 
         status = V + I + OP
         return status
+
+    def set_default(self):
+        self.set_output('OFF')
+        self.set(0, 0)
+
 
 
 ## Implement scan into dashboard callback such that it can be stopped!

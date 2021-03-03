@@ -124,6 +124,12 @@ def graph():
         ]
     )
 
+def stop():
+    return html.Button('STOP', id='stop_button',
+                       style={'background-color': 'red',
+                              'height': '50px',
+                              'width': '100px',
+                              'font-weight': 'bold'})
 
 def tabs():
     return html.Div(
