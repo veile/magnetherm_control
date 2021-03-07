@@ -19,6 +19,8 @@ from app.devices import ToneGenerator, PowerSupply, dummy_ToneGenerator, dummy_P
 import app.components as comp
 import app.utils as utils
 
+import waitress
+
 # tone = dummy_ToneGenerator()
 # power = dummy_PowerSupply()
 
@@ -199,40 +201,6 @@ def stop_exposure(n):
 
 # -------------------------------------------------------------------------------------------------------------------
 @app.callback(
-    [Output('tune_interval', 'disabled'),
-     Output('tune_button', 'disabled'),
-     Output('test_div', 'children')],
-    [Input('confirm_tuning', 'submit_n_clicks'),
-     Input('tune_div', 'children')]
-)
-def start_graphing(n, div):
-    if n is not None:
-        ctx = dash.callback_context
-
-
-        return True, False, str(ctx.triggered)
-
-        # context = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
-        # if context == 'submit_n_clicks':
-        #     return False, True
-        # else:
-        #     return True, False
-
-    else:
-        return True, False, 'test div'
-
-@app.callback(
-    Output('graph_div', 'children'),
-    Input('tune_interval', 'n_intervals')
-)
-def update(n):
-    if n is None:
-        return 'PLACEHOLDER'
-    return "Interval has been triggered %i times" %n
-
-
-
-@app.callback(
     [Output('confirm_tuning', 'displayed'),
      Output('confirm_tuning', 'message')],
     Input('tune_button', 'n_clicks'),
@@ -245,19 +213,59 @@ def confirm_tuning(clicks, coil, cap):
     else:
         return True, "Make sure that the coil has %s turns and the capacitor is at %s nF"%(str(coil), str(cap))
 
+@app.callback(
+    [Output('tune_interval', 'disabled'),
+     Output('tune_button', 'disabled'),
+     Output('test_div', 'children')],
+    [Input('confirm_tuning', 'submit_n_clicks'),
+     Input('tune_div', 'children')]
+)
+def start_graphing(n, div):
+    print(div)
+    if n is not None:
+        ctx = dash.callback_context
 
+
+        return False, True, str(ctx.triggered)
+
+        # context = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
+        # if context == 'submit_n_clicks':
+        #     return False, True
+        # else:
+        #     return True, False
+
+    else:
+        return True, False, 'n was None'
 
 @app.callback(
+    Output('graph_div', 'children'),
+    Input('tune_interval', 'n_intervals')
+)
+def update(n):
+    if n is None:
+        return 'PLACEHOLDER'
+    return "Interval has been triggered %i times" % n
+
+
+# @app.callback(
+#     Output('tune_div', 'children'),
+#     Input('confirm_tuning', 'submit_n_clicks'),
+#     [State('freq_low', 'value'),
+#      State('freq_high', 'value'),
+#      State('coil_type', 'value'),
+#      State('cap_type', 'value')]
+# )
+@app.callback(
     Output('tune_div', 'children'),
-    Input('confirm_tuning', 'submit_n_clicks'),
+    Input('tune_button', 'disabled'),
     [State('freq_low', 'value'),
      State('freq_high', 'value'),
      State('coil_type', 'value'),
      State('cap_type', 'value')]
 )
-def tune(clicks, flow, fhigh, coil, cap):
+def tune(disabled, flow, fhigh, coil, cap):
     global tone, power, exposing, tuned
-    if clicks == None:
+    if not disabled:
         return "Click tune to tune system"
 
     if 'tone' not in globals() or 'power' not in globals():
@@ -282,10 +290,11 @@ def tune(clicks, flow, fhigh, coil, cap):
     power.set(0, 0)
     power.set_output('ON')
 
+    print('*TUNING STARTED')
     for f in freqs:
         if not exposing:
             return 'Tuning stopped'
-        print(f)
+        # print(f)
         tone.set_frequency(f)
         time.sleep(1)
         reading = power.get_I()
@@ -456,3 +465,4 @@ def refresh_files_list(n_clicks):
 
 if __name__ == '__main__':
     app.run_server(debug=True, host='0.0.0.0')
+    # waitress.serve(app.server, threads=4)
