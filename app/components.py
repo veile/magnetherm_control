@@ -13,11 +13,17 @@ from app import colors
 from app.utils import get_files, matrix_sheet
 
 
-def refresh():
-    return dcc.Interval(id='refresh', interval=5e3)
+# def refresh():
+#     return dcc.Interval(id='refresh', interval=5e3)
+#
+# def quick_refresh():
+#     return dcc.Interval(id='quick_refresh', interval=1e3)
 
-def quick_refresh():
-    return dcc.Interval(id='quick_refresh', interval=1e3)
+def tune_interval():
+    return dcc.Interval(id='tune_interval', interval=1e3, disabled=True)
+
+def exp_interval():
+    return dcc.Interval(id='exp_interval', interval=1e3, disabled=True)
 
 def markdown(text, plc='center'):
     return dcc.Markdown(children=text,
@@ -111,6 +117,7 @@ def temp_options():
 
 def graph():
     return html.Div(
+        id='graph_div',
         style={
             'width': '50%',
             'height': 270,
@@ -212,7 +219,7 @@ def tuning():
                     ),
                     html.Br(), html.Br(), html.Br(),
                     html.Button("Tune", id="tune_button", style={'width': '200px'},
-                                n_clicks=0),
+                                n_clicks=0, disabled=False),
                     dcc.Loading(
                         id="tuning",
                         children=[html.Div(id='tune_div')],
@@ -272,7 +279,7 @@ def exposure():
                     ),
                     html.Br(), html.Br(), html.Br(),
                     html.Button("Start", id="exp_button", style={'width': '200px'},
-                                n_clicks=0),
+                                n_clicks=0, disabled=False),
                     # dbc.Progress(id="progress_expose", value=0, striped=True, animated=True),
                     dcc.Loading(
                         id="exposing",

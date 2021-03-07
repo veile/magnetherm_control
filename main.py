@@ -6,6 +6,7 @@ from zipfile import ZipFile
 from flask import send_from_directory
 from serial import SerialException
 
+import dash
 import dash_html_components as html
 import dash_core_components as dcc
 from dash.dependencies import Output, Input, State
@@ -24,6 +25,7 @@ import app.utils as utils
 global tone
 global power
 exposing = False
+tuned = False
 
 @app.server.route('/data/<path:path>')
 def serve_static(path):
@@ -61,10 +63,10 @@ index_page = html.Div(
                      comp.graph(),
                  ]),
         comp.tabs(),
-        comp.refresh(),
-        comp.quick_refresh(),
+        comp.tune_interval(),
         html.Br(),
-        comp.stop()
+        comp.stop(),
+        html.Div(id='test_div')
     ]
 )
 
@@ -117,7 +119,7 @@ def connect(n_clicks, tone_port, power_port):
 
     c = {True: colors['on'], False: colors['off']}
     if n_clicks == 0:
-        return '', c[False], c[False]
+        return 'Please connect to the devices', c[False], c[False]
     else:
         s = ''
         conn = [False, False]
@@ -183,19 +185,6 @@ def set_frequency_range(coil_type, cap_type):
 
 
 @app.callback(
-    [Output('confirm_tuning', 'displayed'),
-     Output('confirm_tuning', 'message')],
-    Input('tune_button', 'n_clicks'),
-    [State('coil_type', 'value'),
-     State('cap_type', 'value')]
-)
-def confirm_tuning(clicks, coil, cap):
-    if clicks == 0:
-        return False, ""
-    else:
-        return True, "Make sure that the coil has %s turns and the capacitor is at %s nF"%(str(coil), str(cap))
-
-@app.callback(
     Output('stop_button', 'value'),
     Input('stop_button', 'n_clicks')
 )
@@ -208,6 +197,56 @@ def stop_exposure(n):
     exposing = False
     return 'STOP'
 
+# -------------------------------------------------------------------------------------------------------------------
+@app.callback(
+    [Output('tune_interval', 'disabled'),
+     Output('tune_button', 'disabled'),
+     Output('test_div', 'children')],
+    [Input('confirm_tuning', 'submit_n_clicks'),
+     Input('tune_div', 'children')]
+)
+def start_graphing(n, div):
+    if n is not None:
+        ctx = dash.callback_context
+
+
+        return True, False, str(ctx.triggered)
+
+        # context = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
+        # if context == 'submit_n_clicks':
+        #     return False, True
+        # else:
+        #     return True, False
+
+    else:
+        return True, False, 'test div'
+
+@app.callback(
+    Output('graph_div', 'children'),
+    Input('tune_interval', 'n_intervals')
+)
+def update(n):
+    if n is None:
+        return 'PLACEHOLDER'
+    return "Interval has been triggered %i times" %n
+
+
+
+@app.callback(
+    [Output('confirm_tuning', 'displayed'),
+     Output('confirm_tuning', 'message')],
+    Input('tune_button', 'n_clicks'),
+    [State('coil_type', 'value'),
+     State('cap_type', 'value')]
+)
+def confirm_tuning(clicks, coil, cap):
+    if clicks == 0:
+        return False, ""
+    else:
+        return True, "Make sure that the coil has %s turns and the capacitor is at %s nF"%(str(coil), str(cap))
+
+
+
 @app.callback(
     Output('tune_div', 'children'),
     Input('confirm_tuning', 'submit_n_clicks'),
@@ -217,7 +256,7 @@ def stop_exposure(n):
      State('cap_type', 'value')]
 )
 def tune(clicks, flow, fhigh, coil, cap):
-    global exposing, tone, power
+    global tone, power, exposing, tuned
     if clicks == None:
         return "Click tune to tune system"
 
@@ -225,9 +264,7 @@ def tune(clicks, flow, fhigh, coil, cap):
         return "Please connect to devices."
 
     if exposing:
-        exposing = False
-        power.set_default()
-        return 'Tuning stopped'
+        return "Experiment is running!"
 
     exposing = True
 
@@ -256,26 +293,29 @@ def tune(clicks, flow, fhigh, coil, cap):
         currents.append(reading)
 
     power.set_default()
-    return currents.__repr__()
+    exposing = False
 
+    tuned = True
+    return currents.__repr__()
+# -------------------------------------------------------------------------------------------------------------------
 
 # #Exposure
-# # Gives circular dependence - in theory fine but gives clunky response
-# # @app.callback(
-# #     Output('exp_field', 'value'),
-# #     Input('exp_current', 'value')
-# # )
-# # def current_to_field(current):
-# #     f = utils.get_frequency()
-# #     current = float(current)
-# #     try:
-# #         field = utils.current_to_field(f, current)
-# #     except TypeError as e:
-# #         return str(e)
-# #         # return str(f)
-# #
-# #     return "%.3f"%field
+# Gives circular dependence - in theory fine but gives clunky response
+# @app.callback(
+#     Output('exp_field', 'value'),
+#     Input('exp_current', 'value')
+# )
+# def current_to_field(current):
+#     f = utils.get_frequency()
+#     current = float(current)
+#     try:
+#         field = utils.current_to_field(f, current)
+#     except TypeError as e:
+#         return str(e)
+#         # return str(f)
 #
+#     return "%.3f"%field
+
 # @app.callback(
 #     Output('exp_current', 'value'),
 #     Input('exp_field', 'value')
@@ -289,85 +329,95 @@ def tune(clicks, flow, fhigh, coil, cap):
 #         return str(e)
 #
 #     return "%.3f"%power_current
-#
-#
-# @app.callback(
-#     [Output('confirm_exposure', 'displayed'),
-#      Output('confirm_exposure', 'message')],
-#     Input('exp_button', 'n_clicks'),
-#     [State('exp_time', 'value'),
-#      State('exp_field', 'value')]
-# )
-# def confirm_exposure(clicks, time, field):
-#     if clicks == 0:
-#         return False, ""
-#     else:
-#         return True, "Expose %s mT for %s seconds?"%(str(field), str(time))
-#
-# @app.callback(
-#     Output('expose_div', 'children'),
-#     Input('confirm_exposure', 'submit_n_clicks'),
-#     [State('exp_time', 'value'),
-#      State('exp_current', 'value'),
-#      State('tone_com', 'value'),
-#      State('power_com', 'value')]
-# )
-# def expose(clicks, time, current, tone, power):
-#     if clicks == None:
-#         return "Click to start exposure"
-#
-#     elif not time or not current:
-#         return "Please enter valid values"
-#
-#     else:
-#         exposure_on = utils.exposing()
-#         if exposure_on:
-#             utils.set_exposure(False)
-#             return 'Exposure Interrupted'
-#
-#         utils.set_exposure(1)
-#         # import time as t
-#         # t.sleep(time)
-#
-#         try:
-#             T = ToneGenerator(tone)
-#         except SerialException:
-#             utils.change_state("Tuning failed!", 'current')
-#             ports = utils.get_devices()
-#             if tone not in ports:
-#                 return "Tone Generator is not present on port %s" %tone
-#             else:
-#                 return "Cannot connect to the tone generator"
-#
-#         try:
-#             P = PowerSupply(power)
-#         except SerialException:
-#             utils.change_state("Tuning failed!", 'current')
-#             ports = utils.get_devices()
-#             if power not in ports:
-#                 return "Power Supply is not present on port %s" %tone
-#             else:
-#                 return "Cannot connect to the power supply"
-#
-#         # Checks if system is tuned
-#         f = utils.get_frequency()
-#         try:
-#             f = float(f)
-#         except TypeError:
-#             return "TUNE THE SYSTEM!"
-#
-#         # Checks if current is numeric
-#         try:
-#             current = float(current)
-#         except:
-#             return "Input valid number at current"
-#
-#         exposure(T, P, time, V=45, I=current)
-#
-#         utils.set_exposure(0)
-#         return "Exposure done"
+
+@app.callback(
+    [Output('confirm_exposure', 'displayed'),
+     Output('confirm_exposure', 'message')],
+    Input('exp_button', 'n_clicks'),
+    [State('exp_time', 'value'),
+     State('exp_field', 'value')]
+)
+def confirm_exposure(clicks, exp_time, field):
+    if clicks == 0:
+        return False, ""
+    else:
+        return True, "Expose %s mT for %s seconds?"%(str(field), str(exp_time))
+
+@app.callback(
+    Output('expose_div', 'children'),
+    Input('confirm_exposure', 'submit_n_clicks'),
+    [State('exp_time', 'value'),
+     State('exp_current', 'value')]
+)
+def expose(clicks, exp_time, current):
+    global power, tone, exposing, tuned
+    if clicks is None:
+        return "Click to start exposure"
+
+    if 'tone' not in globals() or 'power' not in globals():
+        return "Please connect to devices."
+
+    if not tuned:
+        return "Please tune the system first!"
+
+    if not exp_time or not current:
+        return "Please enter valid values"
+
+    if exposing:
+        return "Experiment is running!"
+    exposing = True
 
 
+    # Checks if current is numeric
+    try:
+        current = float(current)
+    except:
+        return "Input valid number at current"
+
+
+    tone.set_output('ON')
+    V  = []
+    I  = []
+    t  = []
+
+    start = time.time()
+    power.set(V=45, I=current)
+    power.set_output('ON')
+
+    while (time.time() - start) < exp_time:
+        if not exposing:
+            return "Experiment stopped"
+
+
+        t = time.time()
+
+        V.append(power.get_V())
+        I.append(power.get_I())
+
+        print(V, I)
+        time.sleep(1)
+
+    power.set_default()
+    exposing = False
+    return "Exposure done"
+
+
+
+
+
+# @app.callback(
+#     [Output('exp_button', 'disabled'),
+#      Output('tune_button', 'disabled')],
+#     [Input('expose_div', 'children'),
+#      Input('confirm_exposure', 'submit_n_clicks')]
+# )
+# def lock_buttons():
+#     context = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
+#
+#     if context == 'confirm_exposing':
+#         return True
+#     else:
+#         return False
 
 # Callbacks for data page
 @app.callback(
@@ -405,4 +455,4 @@ def refresh_files_list(n_clicks):
 
 
 if __name__ == '__main__':
-        app.run_server(debug=True, host='0.0.0.0')
+    app.run_server(debug=True, host='0.0.0.0')

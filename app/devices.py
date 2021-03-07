@@ -233,7 +233,7 @@ class dummy_PowerSupply():
         return self.comm('*IDN?')
 
     def get_V(self):
-        return self.comm('V1O?')
+        return random.randint(0, 5)
 
     def set_V(self, V):
         # Checks if input is allowed
