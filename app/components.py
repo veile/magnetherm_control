@@ -25,14 +25,6 @@ def tune_interval():
 def exp_interval():
     return dcc.Interval(id='exp_interval', interval=1e3, disabled=True)
 
-def markdown(text, plc='center'):
-    return dcc.Markdown(children=text,
-                        style={
-                            'textAlign' : plc
-                        }
-    )
-
-
 def com_inputs():
     # options_list = get_devices()
     # options = [{'label': a, 'value': a} for a in options_list]

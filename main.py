@@ -33,11 +33,7 @@ def serve_static(path):
     return send_from_directory(
         os.path.join(root_dir, 'data'), path, as_attachment=True)
 
-
-markdown_text = r'''
-# Magnetherm Dashboard
-'''
-
+    
 content_div = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div(id='page_content')
@@ -49,7 +45,8 @@ index_page = html.Div(
         'backgroundColor': colors['background']
     },
     children=[
-        comp.markdown(markdown_text, plc='center'),
+        dcc.Markdown('# Magnetherm Dashboard', id='header',
+                     style={'textAlign': 'center'}),
         # html.Br(),
         dcc.Link('Go to data', href='/data'),
         # html.Div(dcc.Markdown(utils.current_state(), id='current_state') ),
@@ -76,7 +73,8 @@ data_layout = html.Div(
         'backgroundColor': colors['background']
     },
     children=[
-        comp.markdown(markdown_text, plc='center'),
+        dcc.Markdown('# Magnetherm Dashboard', id='header',
+                     style={'textAlign': 'center'}),
         # html.Br(),
         dcc.Link('Go back', href='/'),
         html.Div(style={'float': 'right', 'marginRight': 20}, children=[
@@ -124,13 +122,15 @@ def connect(n_clicks, tone_port, power_port):
         s = ''
         conn = [False, False]
         try:
-            tone = dummy_ToneGenerator(tone_port)
+            tone = ToneGenerator(tone_port)
+            #tone = dummy_ToneGenerator(tone_port)
             conn[0] = True
         except SerialException as error:
             s += str(error)
 
         try:
-            power = dummy_PowerSupply(power_port)
+            power = PowerSupply(power_port)
+            #power = dummy_PowerSupply(power_port)
             conn[1] = True
         except SerialException as error:
             s += str(error)
@@ -143,7 +143,7 @@ def connect(n_clicks, tone_port, power_port):
 
 @app.callback(
     [Output('tone_com', 'options'), Output('power_com', 'options')],
-    Input('refresh', 'n_intervals')
+    Input('header', 'children')
 )
 def refresh_options(n_intervals):
     options_list = utils.get_devices()
