@@ -20,9 +20,9 @@ import app.components as comp
 import app.utils as utils
 
 # Debugging mode
-PowerSupply = dummy_PowerSupply
-ToneGenerator = dummy_ToneGenerator
-TC = dummy_TC
+#PowerSupply = dummy_PowerSupply
+#ToneGenerator = dummy_ToneGenerator
+#TC = dummy_TC
 # --------------
 
 global tone
@@ -332,6 +332,8 @@ def tune(disabled, flow, fhigh, coil, cap, filename):
 
     power.set_default()
     exposing = False
+    
+    tone.set_frequency(fres)
     tuned = True
 
     return "Resonance frequency is %.1f kHz" %(fres*1e-3)
