@@ -164,7 +164,12 @@ class PowerSupply():
 
 class TC():
     def __init__(self, addresses):
-        self.mcp = [MCP9600(a) for a in addresses]
+        for i in range(10):
+          	try:
+          		self.mcp = [MCP9600(a) for a in addresses]
+          	except:
+          		print("Attempt %i out of 10" %i)
+          		continue
 
     def __len__(self):
         return len(self.mcp)
@@ -187,7 +192,7 @@ class TC():
 
         else:
             for tc in self.mcp:
-                tc._mcp9600.set('DEVICE_CONFIG', type_select='adc_resolution')
+                tc._mcp9600.set('DEVICE_CONFIG', adc_resolution=res)
 
 
 

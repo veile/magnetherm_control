@@ -20,9 +20,9 @@ import app.components as comp
 import app.utils as utils
 
 # Debugging mode
-PowerSupply = dummy_PowerSupply
-ToneGenerator = dummy_ToneGenerator
-TC = dummy_TC
+#PowerSupply = dummy_PowerSupply
+#ToneGenerator = dummy_ToneGenerator
+#TC = dummy_TC
 # --------------
 
 global tone
@@ -31,7 +31,7 @@ global power
 exposing = False
 tuned = False
 
-tcs = TC(['0x66', '0x60'])
+tcs = TC([0x67, 0x60])
 
 app.scripts.config.serve_locally = True	
 
@@ -188,7 +188,8 @@ def set_frequency_range(coil_type, cap_type):
 def tc_configure(type, res):
     tcs.set_type(type)
     tcs.set_adc(res)
-    return "Thermocouple configured!"
+    return "Thermocouple configured to type %s and resolution %i!" %(type, res)
+
 
 @app.callback(
     Output('stop_button', 'value'),
@@ -263,6 +264,9 @@ def tune(disabled, flow, fhigh, coil, cap, filename):
 
     if exposing:
         return "Experiment is running!"
+        
+    if filename is None:
+        return "Please input a filename"
 
     exposing = True
 
@@ -280,7 +284,7 @@ def tune(disabled, flow, fhigh, coil, cap, filename):
     power.set(0, 0)
     power.set_output('ON')
 
-    t_header = ", ".join(['T%i [degC]' for i in range(len(tcs))] )
+    t_header = ", ".join(['T%i [degC]' %i for i in range(len(tcs))] )
     header = 'Frequency [Hz], Current [A], Voltage [V], ' + t_header
     with open("data/" + filename, 'w') as file:
         file.write(header+"\n")
@@ -293,13 +297,14 @@ def tune(disabled, flow, fhigh, coil, cap, filename):
         tone.set_frequency(f)
         time.sleep(1)
 
-        reading = power.get_I()
+        readingI = power.get_I().strip('A')
+        readingV = power.get_V().strip('V')
         temperatures = ', '.join(list(map(str, tcs.get_T())))
-        with open("data/"+filename, 'a') as file:
-            output = '%.1f, %.2f, '%(f, reading) + temperatures
+        with open("data/"+filename+'_tune.txt', 'a') as file:
+            output = '%.1f, %s, %s, '%(f, readingI, readingV) + temperatures
             file.write(output+"\n")
 
-        currents.append(reading)
+        currents.append(readingI)
 
     power.set_default()
     exposing = False
