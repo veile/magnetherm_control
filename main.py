@@ -15,15 +15,23 @@ from dash_extensions.snippets import send_file
 
 from app import app, colors
 # from app.utils import get_devices, get_files, matrix_sheet, current_state, change_state
-from app.devices import ToneGenerator, PowerSupply, dummy_ToneGenerator, dummy_PowerSupply
+from app.devices import ToneGenerator, PowerSupply, TC, dummy_ToneGenerator, dummy_PowerSupply, dummy_TC
 import app.components as comp
 import app.utils as utils
+
+# Debugging mode
+PowerSupply = dummy_PowerSupply
+ToneGenerator = dummy_ToneGenerator
+TC = dummy_TC
+# --------------
 
 global tone
 global power
 
 exposing = False
 tuned = False
+
+tcs = TC(['0x66', '0x60'])
 
 app.scripts.config.serve_locally = True	
 
@@ -173,6 +181,16 @@ def set_frequency_range(coil_type, cap_type):
 
 
 @app.callback(
+    Output('test_div', 'children'),
+    (Input('tc_type', 'value'),
+     Input('tc_rate', 'value'))
+)
+def tc_configure(type, res):
+    tcs.set_type(type)
+    tcs.set_adc(res)
+    return "Thermocouple configured!"
+
+@app.callback(
     Output('stop_button', 'value'),
     Input('stop_button', 'n_clicks')
 )
@@ -230,9 +248,10 @@ def update(n):
     [State('freq_low', 'value'),
      State('freq_high', 'value'),
      State('coil_type', 'value'),
-     State('cap_type', 'value')]
+     State('cap_type', 'value'),
+     State('filename-input', 'value')]
 )
-def tune(disabled, flow, fhigh, coil, cap):
+def tune(disabled, flow, fhigh, coil, cap, filename):
     global tone, power, exposing, tuned
     if disabled:
         return "Click tune to tune system"
@@ -261,14 +280,24 @@ def tune(disabled, flow, fhigh, coil, cap):
     power.set(0, 0)
     power.set_output('ON')
 
+    t_header = ", ".join(['T%i [degC]' for i in range(len(tcs))] )
+    header = 'Frequency [Hz], Current [A], Voltage [V], ' + t_header
+    with open("data/" + filename, 'w') as file:
+        file.write(header+"\n")
+
     print('*TUNING STARTED')
     for f in freqs:
         if not exposing:
             return 'Tuning stopped'
-        # print(f)
+
         tone.set_frequency(f)
         time.sleep(1)
+
         reading = power.get_I()
+        temperatures = ', '.join(list(map(str, tcs.get_T())))
+        with open("data/"+filename, 'a') as file:
+            output = '%.1f, %.2f, '%(f, reading) + temperatures
+            file.write(output+"\n")
 
         currents.append(reading)
 

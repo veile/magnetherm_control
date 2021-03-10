@@ -94,15 +94,18 @@ def temp_options():
             dcc.Dropdown(
                 id='tc_type',
                 options=types,
-                value='K'
+                value='N'
             ),
             html.Br(),
             html.Label("Sampling rate"),
             dcc.Dropdown(
                 id='tc_rate',
                 options=res,
-                value=14
-            )
+                value=18
+            ),
+            html.Br(),
+            html.Label("Filename (.txt)"),
+            dcc.Input(id='filename-input', type='text', placeholder='filename')
         ]
     )
 

@@ -7,6 +7,7 @@ Created on Wed Sep  9 12:32:52 2020
 import serial
 import time
 import random
+from mcp9600 import MCP9600
 
 class WrongDeviceError(Exception):
     """Base class for wrong device"""
@@ -161,6 +162,34 @@ class PowerSupply():
         status = V+I+OP
         return status
 
+class TC():
+    def __init__(self, addresses):
+        self.mcp = [MCP9600(a) for a in addresses]
+
+    def __len__(self):
+        return len(self.mcp)
+
+    def get_T(self):
+        T = [tc.get_hot_junction_temperature() for tc in self.mcp]
+        return T
+
+    def set_type(self, type):
+        if type not in ['K', 'J', 'T', 'N', 'S', 'E', 'B', 'R']:
+            raise Exception('Not supported thermocouple type')
+
+        else:
+            for tc in self.mcp:
+                tc.set_thermocouple_type(type)
+
+    def set_adc(self, res):
+        if res not in [12, 14, 16, 18]:
+            raise Exception("ADC Resolution must be 12, 14, 16 or 18")
+
+        else:
+            for tc in self.mcp:
+                tc._mcp9600.set('DEVICE_CONFIG', type_select='adc_resolution')
+
+
 
 # ---------------------------DUMMY OBJECTS-----------------------------------------------#
 class dummy_ToneGenerator():
@@ -292,57 +321,27 @@ class dummy_PowerSupply():
         self.set(0, 0)
 
 
+class dummy_TC():
+    def __init__(self, addresses):
+        self.mcp = addresses
 
-## Implement scan into dashboard callback such that it can be stopped!
-# def scan(tone, power, freqs, V, I):
-#     # duration = 2 #
-#     currents = []
-#     current = []
-#
-#     power.set(V, I)
-#     tone.frequency(freqs[0])
-#     time.sleep(0.5)
-#
-#     power.set_output('ON')
-#     tone.output('ON')
-#     for f in freqs:
-#         tone.frequency(f)
-#         # start = time.time()
-#         # while (time.time()-start) < duration:
-#         time.sleep(0.5)
-#         read = power.get_I()
-#         # print(read)
-#         currents.append( float(read[:5]) )
-#         # currents.append( np.array(current).mean() )
-#
-#     power.set(0,0)
-#     power.set_output('OFF')
-#     return np.array(currents)
-#
-# def exposure(T, P, t, V, I):
-#     volts = []
-#     tV = []
-#     amps = []
-#     tI = []
-#
-#
-#     P.set(V, I)
-#     P.set_output('ON')
-#     start = time.time()
-#     while (time.time()-start) < t:
-#         readV = P.get_V()
-#         tV.append( time.time()-start )
-#
-#         readI = P.get_I()
-#         tI.append( time.time()-start )
-#
-#         volts.append(float(readV[:5]))
-#         amps.append(float(readI[:5]))
-#
-#     P.set_output('OFF')
-#     P.set(0, 0)
-#     return tV, volts, tI, amps
+    def __len__(self):
+        return len(self.mcp)
 
-#
-# if __name__ == '__main__':
-#
+    def get_T(self):
+        T = [random.randint(50, 100) for i in range(len(self))]
+        return T
+
+    def set_type(self, type):
+        if type not in ['K', 'J', 'T', 'N', 'S', 'E', 'B', 'R']:
+            raise Exception('Not supported thermocouple type')
+
+        else:
+            print("Set thermocouple to type %s" %type)
+
+    def set_adc(self, res):
+        if res not in [12, 14, 16, 18]:
+            raise Exception("ADC Resolution must be 12, 14, 16 or 18")
+
+        else:
+            print("Set res to %i" %res)
