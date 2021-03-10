@@ -267,7 +267,7 @@ class dummy_PowerSupply():
         return self.comm('*IDN?')
 
     def get_V(self):
-        return random.randint(0, 5)
+        return "%iV" %random.randint(0, 5)
 
     def set_V(self, V):
         # Checks if input is allowed
@@ -276,7 +276,7 @@ class dummy_PowerSupply():
         return self.comm('V1 ' + str(V))
 
     def get_I(self):
-        return random.randint(0, 5)
+        return "%iA" %random.randint(0, 5)
 
     def set_I(self, I):
         # Checks if input is allowed

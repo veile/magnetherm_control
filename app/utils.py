@@ -111,7 +111,7 @@ def current_to_field(f, power_current, r=18e-3, L=53e-3, N=18):
     I = coil_current(f, power_current)
     return k1*I
 
-def field_to_current(field, f, r=18e-3, L=53e-3, N=18):
+def field_to_current(field, f):
     mu0 = 4*np.pi*1e-7
     I = field/k1
 

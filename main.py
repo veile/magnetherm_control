@@ -20,20 +20,21 @@ import app.components as comp
 import app.utils as utils
 
 # Debugging mode
-#PowerSupply = dummy_PowerSupply
-#ToneGenerator = dummy_ToneGenerator
-#TC = dummy_TC
+PowerSupply = dummy_PowerSupply
+ToneGenerator = dummy_ToneGenerator
+TC = dummy_TC
 # --------------
 
 global tone
 global power
+global fres
 
 exposing = False
 tuned = False
 
 tcs = TC([0x67, 0x60])
 
-app.scripts.config.serve_locally = True	
+app.scripts.config.serve_locally = True
 
 @app.server.route('/data/<path:path>')
 def serve_static(path):
@@ -41,7 +42,7 @@ def serve_static(path):
     return send_from_directory(
         os.path.join(root_dir, 'data'), path, as_attachment=True)
 
-    
+
 content_div = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div(id='page_content')
@@ -253,7 +254,7 @@ def update(n):
      State('filename-input', 'value')]
 )
 def tune(disabled, flow, fhigh, coil, cap, filename):
-    global tone, power, exposing, tuned
+    global tone, power, exposing, tuned, fres
     if disabled:
         return "Click tune to tune system"
     #if n is None:
@@ -264,11 +265,17 @@ def tune(disabled, flow, fhigh, coil, cap, filename):
 
     if exposing:
         return "Experiment is running!"
-        
+
     if filename is None:
         return "Please input a filename"
 
     exposing = True
+
+    t_header = ", ".join(['T%i [degC]' %i for i in range(len(tcs))] )
+    header = 'Frequency [Hz], Current [A], Voltage [V], ' + t_header
+    with open("data/" + filename+"_tune.txt", 'w') as file:
+        file.write(header+"\n")
+
 
     V = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil) &
                      (utils.matrix_sheet['Capacitance [nF]'] == cap)].iloc[0]['Voltage [V]']
@@ -277,25 +284,19 @@ def tune(disabled, flow, fhigh, coil, cap, filename):
 
     currents = []
 
+    # Rough estimate
     freqs = np.linspace(flow*1e3, fhigh*1e3, 11)
     tone.set_frequency(freqs[0])
     tone.set_output('ON')
 
     power.set(0, 0)
     power.set_output('ON')
-
-    t_header = ", ".join(['T%i [degC]' %i for i in range(len(tcs))] )
-    header = 'Frequency [Hz], Current [A], Voltage [V], ' + t_header
-    with open("data/" + filename, 'w') as file:
-        file.write(header+"\n")
-
-    print('*TUNING STARTED')
     for f in freqs:
         if not exposing:
             return 'Tuning stopped'
 
         tone.set_frequency(f)
-        time.sleep(1)
+        time.sleep(.5)
 
         readingI = power.get_I().strip('A')
         readingV = power.get_V().strip('V')
@@ -306,43 +307,79 @@ def tune(disabled, flow, fhigh, coil, cap, filename):
 
         currents.append(readingI)
 
+    fmax = freqs[np.argmax(currents)]
+
+    # Finer estimate
+    currents = []
+    freqs = np.linspace(fmax-1e3, fmax+1e3, 5)
+    for f in freqs:
+        if not exposing:
+            return 'Tuning stopped'
+
+        tone.set_frequency(f)
+        time.sleep(.5)
+
+        readingI = power.get_I().strip('A')
+        readingV = power.get_V().strip('V')
+        temperatures = ', '.join(list(map(str, tcs.get_T())))
+        with open("data/"+filename+'_tune.txt', 'a') as file:
+            output = '%.1f, %s, %s, '%(f, readingI, readingV) + temperatures
+            file.write(output+"\n")
+
+        currents.append(readingI)
+
+    fres = freqs[np.argmax(currents)]
+
     power.set_default()
     exposing = False
-
     tuned = True
-    return currents.__repr__()
+
+    return "Resonance frequency is %.1f kHz" %(fres*1e-3)
 # -------------------------------------------------------------------------------------------------------------------
 
 # #Exposure
-# Gives circular dependence - in theory fine but gives clunky response
-# @app.callback(
-#     Output('exp_field', 'value'),
-#     Input('exp_current', 'value')
-# )
-# def current_to_field(current):
-#     f = utils.get_frequency()
-#     current = float(current)
-#     try:
-#         field = utils.current_to_field(f, current)
-#     except TypeError as e:
-#         return str(e)
-#         # return str(f)
-#
-#     return "%.3f"%field
+@app.callback(
+    Output('exp_field', 'value'),
+    Input('exp_current', 'n_submit'),
+    State('exp_current', 'value')
+)
+def current_to_field(n, current):
+    if n is None:
+        raise dash.exceptions.PreventUpdate
 
-# @app.callback(
-#     Output('exp_current', 'value'),
-#     Input('exp_field', 'value')
-# )
-# def field_to_current(field):
-#     field = float(field)
-#     f = utils.get_frequency()
-#     try:
-#         power_current = utils.field_to_current(field, f)
-#     except TypeError as e:
-#         return str(e)
-#
-#     return "%.3f"%power_current
+    global fres
+
+    if 'fres' not in globals():
+        return '-1'
+
+    try:
+        field = utils.current_to_field(fres*1e-3, float(current))
+    except TypeError as e:
+        return str(e)
+
+    return "%.2f" %field
+
+@app.callback(
+    Output('exp_current', 'value'),
+    Input('exp_field', 'n_submit'),
+    State('exp_field', 'value')
+)
+def field_to_current(n, field):
+    if n is None:
+        raise dash.exceptions.PreventUpdate
+
+    global fres
+
+    if 'fres' not in globals():
+        return '-1'
+
+    field = float(field)
+    try:
+        power_current = utils.field_to_current(field, fres*1e-3)
+    except TypeError as e:
+        return str(e)
+
+    return "%.2f"%power_current
 
 @app.callback(
     [Output('confirm_exposure', 'displayed'),
@@ -361,9 +398,10 @@ def confirm_exposure(clicks, exp_time, field):
     Output('expose_div', 'children'),
     Input('confirm_exposure', 'submit_n_clicks'),
     [State('exp_time', 'value'),
-     State('exp_current', 'value')]
+     State('exp_current', 'value'),
+     State('filename-input', 'value')]
 )
-def expose(clicks, exp_time, current):
+def expose(clicks, exp_time, current, filename):
     global power, tone, exposing, tuned
     if clicks is None:
         return "Click to start exposure"
@@ -381,7 +419,6 @@ def expose(clicks, exp_time, current):
         return "Experiment is running!"
     exposing = True
 
-
     # Checks if current is numeric
     try:
         current = float(current)
@@ -389,10 +426,15 @@ def expose(clicks, exp_time, current):
         return "Input valid number at current"
 
 
+    props = """#Resonance Frequency: %.3f kHz
+#Set Current: %.2f\n""" % (fres, current)
+
+    t_header = ", ".join(['T%i [degC]' % i for i in range(len(tcs))])
+    header = 'Time [ns], Current [A], Voltage [V], ' + t_header
+    with open("data/" + filename+"_exp.txt", 'w') as file:
+        file.write(props + header + "\n")
+
     tone.set_output('ON')
-    V  = []
-    I  = []
-    t  = []
 
     start = time.time()
     power.set(V=45, I=current)
@@ -404,34 +446,20 @@ def expose(clicks, exp_time, current):
 
 
         t = time.time()
+        V = power.get_V().strip('V')
+        I = power.get_I().strip('A')
+        temperatures = ', '.join(list(map(str, tcs.get_T())))
 
-        V.append(power.get_V())
-        I.append(power.get_I())
+        output = "%f, %s, %s, " %(t, I, V) + temperatures
+        with open("data/"+filename+"_exp.txt", 'a') as file:
+            file.write(output+"\n")
 
-        print(V, I)
         time.sleep(1)
 
     power.set_default()
     exposing = False
     return "Exposure done"
 
-
-
-
-
-# @app.callback(
-#     [Output('exp_button', 'disabled'),
-#      Output('tune_button', 'disabled')],
-#     [Input('expose_div', 'children'),
-#      Input('confirm_exposure', 'submit_n_clicks')]
-# )
-# def lock_buttons():
-#     context = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
-#
-#     if context == 'confirm_exposing':
-#         return True
-#     else:
-#         return False
 
 # Callbacks for data page
 @app.callback(
