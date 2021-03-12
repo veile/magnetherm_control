@@ -324,7 +324,7 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
     tone.set_frequency(freqs[0])
     tone.set_output('ON')
 
-    power.set(0, 0)
+    power.set(V/3, I)
     power.set_output('ON')
     for f in freqs:
         if not exposing:
