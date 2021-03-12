@@ -2,6 +2,7 @@
 import os
 import time
 import numpy as np
+import pandas as pd
 from zipfile import ZipFile
 from flask import send_from_directory
 from serial import SerialException
@@ -12,6 +13,8 @@ import dash_core_components as dcc
 from dash.dependencies import Output, Input, State
 from dash_extensions.snippets import send_file
 
+import plotly.graph_objects as go
+import plotly.express as px
 
 from app import app, colors
 # from app.utils import get_devices, get_files, matrix_sheet, current_state, change_state
@@ -20,9 +23,9 @@ import app.components as comp
 import app.utils as utils
 
 # Debugging mode
-#PowerSupply = dummy_PowerSupply
-#ToneGenerator = dummy_ToneGenerator
-#TC = dummy_TC
+# PowerSupply = dummy_PowerSupply
+# ToneGenerator = dummy_ToneGenerator
+# TC = dummy_TC
 # --------------
 
 global tone
@@ -60,7 +63,6 @@ index_page = html.Div(
         dcc.Link('Go to data', href='/data'),
         # html.Div(dcc.Markdown(utils.current_state(), id='current_state') ),
         html.Br(),
-
         html.Div(style={'width': '100%'},
                  children=[
                      comp.com_inputs(),
@@ -69,7 +71,7 @@ index_page = html.Div(
                      comp.graph(),
                  ]),
         comp.tabs(),
-        comp.tune_interval(),
+        # comp.tune_interval(),
         html.Br(),
         comp.stop(),
         html.Div(id='test_div')
@@ -90,7 +92,6 @@ data_layout = html.Div(
             html.Button('Refresh List', id='refresh_files')
         ]),
         html.Br(),
-
         comp.files_list()
     ]
 )
@@ -220,42 +221,75 @@ def confirm_tuning(clicks, coil, cap):
         return True, "Make sure that the coil has %s turns and the capacitor is at %s nF"%(str(coil), str(cap))
 
 
+@app.callback(
+    Output('tune_interval', 'max_intervals'),
+    Input('confirm_tuning', 'submit_n_clicks'),
+    State('tune_interval', 'max_intervals')
+)
+def start_tune_graphing(n, max_ints):
+    if n is None:
+        return 0
+    return max_ints+10
 
 @app.callback(
-    Output('tune_interval', 'disabled'),
-    [Input('confirm_tuning', 'submit_n_clicks'),
-     Input('tune_div', 'children')]
+    Output('tune_graph', 'figure'),
+    Input('tune_interval', 'n_intervals'),
+    [State('filename-input', 'value'),
+     State('freq_low', 'value'),
+     State('freq_high', 'value')]
 )
-def start_graphing(n, div):
-    print(dash.callback_context.triggered)
-    if n is not None:
-        return False
+def update_tune_graph(n, filename, flow, fhigh):
+    if n is None:
+        raise dash.exceptions.PreventUpdate
+    if filename is None:
+        raise dash.exceptions.PreventUpdate
+
+    filename = 'data/' + filename + "_tune.txt"
+
+    try:
+        df = pd.read_csv(filename, sep='\t')
+
+    except:
+        raise dash.exceptions.PreventUpdate
+
+    if df.isnull().any().any():
+        idx = np.where(df.isna().any(1))[0][0]
+
+        df1 = df[:idx]
+        df2 = df[idx:]
 
     else:
-        return True
+        df1 = df
+        df2 = df[-1:]
 
-@app.callback(
-    Output('graph_div', 'children'),
-    Input('tune_interval', 'n_intervals')
-)
-def update(n):
-    if n is None:
-        return 'PLACEHOLDER'
-    return "Interval has been triggered %i times" % n
+
+    x = 'Frequency [Hz]'
+    y = 'Current [A]'
+    fig = px.scatter(df, x, y)
+
+    fig.add_trace(
+        go.Scatter(x=df2[x], y=df2[y], mode='lines+markers')
+    )
+
+    fig.update_traces(mode='lines+markers')
+    fig.update_xaxes(range=[flow*1e3, fhigh*1e3])
+    fig.update_yaxes(range=[min(df[y]), max(df[y])])
+
+    return fig
 
 
 @app.callback(
     Output('tune_div', 'children'),
-    Input('tune_interval', 'disabled'),
+    Input('tune_interval', 'max_intervals'),
     [State('freq_low', 'value'),
      State('freq_high', 'value'),
      State('coil_type', 'value'),
      State('cap_type', 'value'),
      State('filename-input', 'value')]
 )
-def tune(disabled, flow, fhigh, coil, cap, filename):
+def tune(max_ints, flow, fhigh, coil, cap, filename):
     global tone, power, exposing, tuned, fres
-    if disabled:
+    if max_ints==0:
         return "Click tune to tune system"
     #if n is None:
     #    return "Click to tune system"
@@ -271,9 +305,10 @@ def tune(disabled, flow, fhigh, coil, cap, filename):
 
     exposing = True
 
-    t_header = ", ".join(['T%i [degC]' %i for i in range(len(tcs))] )
-    header = 'Frequency [Hz], Current [A], Voltage [V], ' + t_header
-    with open("data/" + filename+"_tune.txt", 'w') as file:
+    filename = 'data/'+filename+"_tune.txt"
+    t_header = "\t".join(['T%i [degC]' %i for i in range(len(tcs))] )
+    header = 'Frequency [Hz]\tCurrent [A]\tVoltage [V]\t' + t_header
+    with open(filename, 'w') as file:
         file.write(header+"\n")
 
 
@@ -300,14 +335,18 @@ def tune(disabled, flow, fhigh, coil, cap, filename):
 
         readingI = power.get_I().strip('A')
         readingV = power.get_V().strip('V')
-        temperatures = ', '.join(list(map(str, tcs.get_T())))
-        with open("data/"+filename+'_tune.txt', 'a') as file:
-            output = '%.1f, %s, %s, '%(f, readingI, readingV) + temperatures
+        temperatures = '\t'.join(list(map(str, tcs.get_T())))
+        with open(filename, 'a') as file:
+            output = '%.1f\t%s\t%s\t'%(f, readingI, readingV) + temperatures
             file.write(output+"\n")
 
         currents.append(readingI)
 
     fmax = freqs[np.argmax(currents)]
+
+    with open(filename, 'a') as file:
+        nan_space = ['#N/A' for i in range(len(header.split('\t')))]
+        file.write('\t'.join(nan_space)+'\n')
 
     # Finer estimate
     currents = []
@@ -321,9 +360,9 @@ def tune(disabled, flow, fhigh, coil, cap, filename):
 
         readingI = power.get_I().strip('A')
         readingV = power.get_V().strip('V')
-        temperatures = ', '.join(list(map(str, tcs.get_T())))
-        with open("data/"+filename+'_tune.txt', 'a') as file:
-            output = '%.1f, %s, %s, '%(f, readingI, readingV) + temperatures
+        temperatures = '\t'.join(list(map(str, tcs.get_T())))
+        with open(filename, 'a') as file:
+            output = '%.1f\t%s\t%s\t'%(f, readingI, readingV) + temperatures
             file.write(output+"\n")
 
         currents.append(readingI)
@@ -396,16 +435,61 @@ def confirm_exposure(clicks, exp_time, field):
     else:
         return True, "Expose %s mT for %s seconds?"%(str(field), str(exp_time))
 
+
+@app.callback(
+    Output('exp_interval', 'max_intervals'),
+    Input('confirm_exposure', 'submit_n_clicks'),
+    [State('exp_interval', 'max_intervals'),
+     State('exp_time', 'value')]
+)
+def start_exp_graphing(n, max_ints, exp_time):
+    if n is None:
+        return 0
+
+    return max_ints+int(exp_time)+5 #5 sec buffer
+
+
+@app.callback(
+    Output('exp_graph', 'figure'),
+    Input('exp_interval', 'n_intervals'),
+    [State('filename-input', 'value'),
+     State('exp_time', 'value')]
+)
+def update_exp_graph(n, filename, exp_time):
+    if n is None:
+        raise dash.exceptions.PreventUpdate
+    if filename is None:
+        raise dash.exceptions.PreventUpdate
+
+    filename = 'data/' + filename + "_exp.txt"
+
+    try:
+        df = pd.read_csv(filename, sep='\t', comment='#')
+
+    except:
+        raise dash.exceptions.PreventUpdate
+
+    x = 'Time [s]'
+    y = 'T0 [degC]'
+    fig = px.scatter(df, x, y)
+
+    fig.update_traces(mode='lines+markers')
+    fig.update_xaxes(range=[0, exp_time])
+    fig.update_yaxes(range=[min(df[y]), max(df[y])])
+
+    return fig
+
 @app.callback(
     Output('expose_div', 'children'),
-    Input('confirm_exposure', 'submit_n_clicks'),
+    Input('exp_interval', 'max_intervals'),
     [State('exp_time', 'value'),
      State('exp_current', 'value'),
      State('filename-input', 'value')]
 )
-def expose(clicks, exp_time, current, filename):
+def expose(max_ints, exp_time, current, filename):
     global power, tone, exposing, tuned
-    if clicks is None:
+
+    if max_ints == 0:
         return "Click to start exposure"
 
     if 'tone' not in globals() or 'power' not in globals():
@@ -421,19 +505,21 @@ def expose(clicks, exp_time, current, filename):
         return "Experiment is running!"
     exposing = True
 
+
     # Checks if current is numeric
     try:
         current = float(current)
     except:
         return "Input valid number at current"
 
+    filename = 'data/' + filename + "_exp.txt"
 
     props = """#Resonance Frequency: %.3f kHz
 #Set Current: %.2f\n""" % (fres, current)
 
-    t_header = ", ".join(['T%i [degC]' % i for i in range(len(tcs))])
-    header = 'Time [ns], Current [A], Voltage [V], ' + t_header
-    with open("data/" + filename+"_exp.txt", 'w') as file:
+    t_header = "\t".join(['T%i [degC]' % i for i in range(len(tcs))])
+    header = 'Time [s]\tCurrent [A]\tVoltage [V]\t' + t_header
+    with open(filename, 'w') as file:
         file.write(props + header + "\n")
 
     tone.set_output('ON')
@@ -450,13 +536,23 @@ def expose(clicks, exp_time, current, filename):
         t = time.time()
         V = power.get_V().strip('V')
         I = power.get_I().strip('A')
-        temperatures = ', '.join(list(map(str, tcs.get_T())))
+        temperatures = '\t'.join(list(map(str, tcs.get_T())))
 
-        output = "%f, %s, %s, " %(t, I, V) + temperatures
-        with open("data/"+filename+"_exp.txt", 'a') as file:
+        output = "%f\t%s\t%s\t" %(t-start, I, V) + temperatures
+        with open(filename, 'a') as file:
             file.write(output+"\n")
 
         time.sleep(1)
+
+    # Retrieving last point:
+    t = time.time()
+    V = power.get_V().strip('V')
+    I = power.get_I().strip('A')
+    temperatures = '\t'.join(list(map(str, tcs.get_T())))
+
+    output = "%f\t%s\t%s\t" % (t - start, I, V) + temperatures
+    with open(filename, 'a') as file:
+        file.write(output + "\n")
 
     power.set_default()
     exposing = False

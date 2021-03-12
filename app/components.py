@@ -19,8 +19,8 @@ from app.utils import get_files, matrix_sheet
 # def quick_refresh():
 #     return dcc.Interval(id='quick_refresh', interval=1e3)
 
-def tune_interval():
-    return dcc.Interval(id='tune_interval', interval=1e3, disabled=True)
+# def tune_interval():
+#     return dcc.Interval(id='tune_interval', interval=1e3)
 
 def exp_interval():
     return dcc.Interval(id='exp_interval', interval=1e3, disabled=True)
@@ -115,14 +115,17 @@ def graph():
         id='graph_div',
         style={
             'width': '50%',
-            'height': 270,
+            'height': 740,
             'padding': '20px',
             'float': 'right',
             'textAlign': 'center',
-            'borderStyle': 'solid'
         },
         children=[
-            html.H1("PLACEHOLDER FOR GRAPH")
+            dcc.Interval(id='tune_interval', interval=1000, n_intervals=0),
+            dcc.Interval(id='exp_interval', interval=1000, n_intervals=0),
+            dcc.Graph(id='tune_graph', animate=True, style={'height': 315}),
+            html.Br(),
+            dcc.Graph(id='exp_graph', animate=True, style={'height': 315})
         ]
     )
 
