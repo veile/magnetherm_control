@@ -23,9 +23,9 @@ import app.components as comp
 import app.utils as utils
 
 # Debugging mode
-# PowerSupply = dummy_PowerSupply
-# ToneGenerator = dummy_ToneGenerator
-# TC = dummy_TC
+PowerSupply = dummy_PowerSupply
+ToneGenerator = dummy_ToneGenerator
+TC = dummy_TC
 # --------------
 
 global tone
@@ -440,22 +440,24 @@ def confirm_exposure(clicks, exp_time, field):
     Output('exp_interval', 'max_intervals'),
     Input('confirm_exposure', 'submit_n_clicks'),
     [State('exp_interval', 'max_intervals'),
-     State('exp_time', 'value')]
+     State('exp_time', 'value'),
+     State('rec_time', 'value')]
 )
-def start_exp_graphing(n, max_ints, exp_time):
+def start_exp_graphing(n, max_ints, exp_time, rec_time):
     if n is None:
         return 0
 
-    return max_ints+int(exp_time)+5 #5 sec buffer
+    return max_ints+int(exp_time+rec_time)+5 #5 sec buffer
 
 
 @app.callback(
     Output('exp_graph', 'figure'),
     Input('exp_interval', 'n_intervals'),
     [State('filename-input', 'value'),
-     State('exp_time', 'value')]
+     State('exp_time', 'value'),
+     State('rec_time', 'value')]
 )
-def update_exp_graph(n, filename, exp_time):
+def update_exp_graph(n, filename, exp_time, rec_time):
     if n is None:
         raise dash.exceptions.PreventUpdate
     if filename is None:
@@ -474,7 +476,7 @@ def update_exp_graph(n, filename, exp_time):
     fig = px.scatter(df, x, y)
 
     fig.update_traces(mode='lines+markers')
-    fig.update_xaxes(range=[0, exp_time])
+    fig.update_xaxes(range=[0, exp_time+rec_time])
     fig.update_yaxes(range=[min(df[y]), max(df[y])])
 
     return fig
@@ -483,10 +485,11 @@ def update_exp_graph(n, filename, exp_time):
     Output('expose_div', 'children'),
     Input('exp_interval', 'max_intervals'),
     [State('exp_time', 'value'),
+     State('rec_time', 'value'),
      State('exp_current', 'value'),
      State('filename-input', 'value')]
 )
-def expose(max_ints, exp_time, current, filename):
+def expose(max_ints, exp_time, rec_time, current, filename):
     global power, tone, exposing, tuned
 
     if max_ints == 0:
@@ -498,7 +501,7 @@ def expose(max_ints, exp_time, current, filename):
     if not tuned:
         return "Please tune the system first!"
 
-    if not exp_time or not current:
+    if not exp_time or not current or not rec_time:
         return "Please enter valid values"
 
     if exposing:
@@ -532,6 +535,24 @@ def expose(max_ints, exp_time, current, filename):
         if not exposing:
             return "Experiment stopped"
 
+        t = time.time()
+        V = power.get_V().strip('V')
+        I = power.get_I().strip('A')
+        temperatures = '\t'.join(list(map(str, tcs.get_T())))
+
+        output = "%f\t%s\t%s\t" %(t-start, I, V) + temperatures
+        with open(filename, 'a') as file:
+            file.write(output+"\n")
+
+        time.sleep(1)
+
+    power.set_default()
+
+    # Records after exposure:
+    rec_start = time.time()
+    while (time.time() - rec_start) < rec_time+1:
+        if not exposing:
+            return "Experiment stopped"
 
         t = time.time()
         V = power.get_V().strip('V')
@@ -544,17 +565,6 @@ def expose(max_ints, exp_time, current, filename):
 
         time.sleep(1)
 
-    # Retrieving last point:
-    t = time.time()
-    V = power.get_V().strip('V')
-    I = power.get_I().strip('A')
-    temperatures = '\t'.join(list(map(str, tcs.get_T())))
-
-    output = "%f\t%s\t%s\t" % (t - start, I, V) + temperatures
-    with open(filename, 'a') as file:
-        file.write(output + "\n")
-
-    power.set_default()
     exposing = False
     return "Exposure done"
 

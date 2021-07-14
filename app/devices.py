@@ -7,7 +7,10 @@ Created on Wed Sep  9 12:32:52 2020
 import serial
 import time
 import random
-from mcp9600 import MCP9600
+import sys
+
+if sys.platform.startswith('linux'):
+    from mcp9600 import MCP9600
 
 class WrongDeviceError(Exception):
     """Base class for wrong device"""

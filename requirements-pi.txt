@@ -7,3 +7,5 @@ dash-daq
 dash_dual_listbox
 dash_extensions
 dash_table
+mcp9600
+smbus

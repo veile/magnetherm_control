@@ -245,7 +245,7 @@ def exposure():
             ),
             html.Div(
                 style={
-                    'width': '30%',
+                    'width': '25%',
                     'float': 'left',
                     'padding': '20px',
                 },
@@ -265,7 +265,7 @@ def exposure():
                 ]
             ),
             html.Div(
-                style={'width': '30%',
+                style={'width': '25%',
                         'display': 'inline-block',
                         'padding': '20px',
                         },
@@ -275,7 +275,22 @@ def exposure():
                         id="exp_field", type='number', placeholder='',
                         style={'width': '200px'}, persistence=True
                     ),
-                    html.Br(), html.Br(), html.Br(),
+                    html.Br(), html.Br(),
+                    html.Label("Record after exposure [s]"),
+                    dcc.Input(
+                        id="rec_time", type='number', placeholder='',
+                        style={'width': '200px'}, persistence=True
+                    ),
+                    html.Br(), html.Br(),
+                ]
+            ),
+            html.Div(
+                style={'width': '25%',
+                       'display': 'inline-block',
+                       'padding': '20px',
+                       },
+                children=[
+                    html.Br(), html.Br(), html.Br(), html.Br(),
                     html.Button("Start", id="exp_button", style={'width': '200px'},
                                 n_clicks=0, disabled=False),
                     # dbc.Progress(id="progress_expose", value=0, striped=True, animated=True),
