@@ -37,6 +37,7 @@ tuned = False
 
 tcs = TC([0x67, 0x60])
 
+app.config['suppress_callback_exceptions'] = True
 app.scripts.config.serve_locally = True
 
 @app.server.route('/data/<path:path>')
@@ -224,12 +225,12 @@ def confirm_tuning(clicks, coil, cap):
 @app.callback(
     Output('tune_interval', 'max_intervals'),
     Input('confirm_tuning', 'submit_n_clicks'),
-    State('tune_interval', 'max_intervals')
+    State('tune_interval', 'n_intervals')
 )
-def start_tune_graphing(n, max_ints):
+def start_tune_graphing(n, n_ints):
     if n is None:
         return 0
-    return max_ints+10
+    return n_ints+10
 
 @app.callback(
     Output('tune_graph', 'figure'),
@@ -272,8 +273,8 @@ def update_tune_graph(n, filename, flow, fhigh):
     )
 
     fig.update_traces(mode='lines+markers')
-    fig.update_xaxes(range=[flow*1e3, fhigh*1e3])
-    fig.update_yaxes(range=[min(df[y]), max(df[y])])
+    fig.update_xaxes()
+    fig.update_yaxes()
 
     return fig
 
@@ -439,15 +440,15 @@ def confirm_exposure(clicks, exp_time, field):
 @app.callback(
     Output('exp_interval', 'max_intervals'),
     Input('confirm_exposure', 'submit_n_clicks'),
-    [State('exp_interval', 'max_intervals'),
+    [State('exp_interval', 'n_intervals'),
      State('exp_time', 'value'),
      State('rec_time', 'value')]
 )
-def start_exp_graphing(n, max_ints, exp_time, rec_time):
+def start_exp_graphing(n, n_ints, exp_time, rec_time):
     if n is None:
         return 0
-
-    return max_ints+int(exp_time+rec_time)+5 #5 sec buffer
+    # print("number of intervals set to: %i" %(max_ints+int(exp_time+rec_time)+5))
+    return n_ints+int(exp_time+rec_time)+5 #5 sec buffer
 
 
 @app.callback(
@@ -472,12 +473,14 @@ def update_exp_graph(n, filename, exp_time, rec_time):
         raise dash.exceptions.PreventUpdate
 
     x = 'Time [s]'
-    y = 'T0 [degC]'
-    fig = px.scatter(df, x, y)
+    y1 = 'T0 [degC]'
+    y2 = 'T1 [degC]'
+
+    fig = px.scatter(df, x, y=[y1, y2])
 
     fig.update_traces(mode='lines+markers')
-    fig.update_xaxes(range=[0, exp_time+rec_time])
-    fig.update_yaxes(range=[min(df[y]), max(df[y])])
+    fig.update_xaxes(autorange=True)
+    fig.update_yaxes(title_text='Temperature [degC]')
 
     return fig
 

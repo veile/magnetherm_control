@@ -123,9 +123,9 @@ def graph():
         children=[
             dcc.Interval(id='tune_interval', interval=1000, n_intervals=0),
             dcc.Interval(id='exp_interval', interval=1000, n_intervals=0),
-            dcc.Graph(id='tune_graph', animate=True, style={'height': 315}),
+            dcc.Graph(id='tune_graph', animate=False, style={'height': 315}),
             html.Br(),
-            dcc.Graph(id='exp_graph', animate=True, style={'height': 315})
+            dcc.Graph(id='exp_graph', animate=False, style={'height': 315})
         ]
     )
 
