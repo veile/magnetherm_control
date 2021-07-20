@@ -23,9 +23,9 @@ import app.components as comp
 import app.utils as utils
 
 # Debugging mode
-PowerSupply = dummy_PowerSupply
-ToneGenerator = dummy_ToneGenerator
-TC = dummy_TC
+# PowerSupply = dummy_PowerSupply
+# ToneGenerator = dummy_ToneGenerator
+# TC = dummy_TC
 # --------------
 
 global tone
