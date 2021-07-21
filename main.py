@@ -23,9 +23,9 @@ import app.components as comp
 import app.utils as utils
 
 # Debugging mode
-# PowerSupply = dummy_PowerSupply
-# ToneGenerator = dummy_ToneGenerator
-# TC = dummy_TC
+PowerSupply = dummy_PowerSupply
+ToneGenerator = dummy_ToneGenerator
+TC = dummy_TC
 # --------------
 
 global tone
@@ -447,8 +447,10 @@ def confirm_exposure(clicks, exp_time, field):
 def start_exp_graphing(n, n_ints, exp_time, rec_time):
     if n is None:
         return 0
-    # print("number of intervals set to: %i" %(max_ints+int(exp_time+rec_time)+5))
-    return n_ints+int(exp_time+rec_time)+5 #5 sec buffer
+    elif not isinstance(exp_time, int) or not isinstance(rec_time, int):
+        return n_ints
+    else:
+        return n_ints+int(exp_time+rec_time)+5 #5 sec buffer
 
 
 @app.callback(
@@ -504,7 +506,7 @@ def expose(max_ints, exp_time, rec_time, current, filename):
     if not tuned:
         return "Please tune the system first!"
 
-    if not exp_time or not current or not rec_time:
+    if not isinstance(exp_time, int) or not current or not isinstance(rec_time, int):
         return "Please enter valid values"
 
     if exposing:

@@ -253,13 +253,13 @@ def exposure():
                     html.Label("Power Supply Current [A]"),
                     dcc.Input(
                         id="exp_current", type='number', placeholder='',
-                        style={'width': '200px'}, persistence=True
+                        style={'width': '200px'}, persistence=True, value=1
                     ),
                     html.Br(), html.Br(),
                     html.Label("Exposure Time [s]"),
                     dcc.Input(
                         id="exp_time", type='number', placeholder='',
-                        style={'width': '200px'}, persistence=True
+                        style={'width': '200px'}, persistence=True, value=10
                     ),
                     html.Br(), html.Br(),
                 ]
@@ -273,13 +273,13 @@ def exposure():
                     html.Label("Exposure Field [mT]"),
                     dcc.Input(
                         id="exp_field", type='number', placeholder='',
-                        style={'width': '200px'}, persistence=True
+                        style={'width': '200px'}, persistence=True, value=-1
                     ),
                     html.Br(), html.Br(),
                     html.Label("Record after exposure [s]"),
                     dcc.Input(
                         id="rec_time", type='number', placeholder='',
-                        style={'width': '200px'}, persistence=True
+                        style={'width': '200px'}, persistence=True, value=0
                     ),
                     html.Br(), html.Br(),
                 ]
