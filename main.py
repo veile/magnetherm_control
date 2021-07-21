@@ -19,13 +19,15 @@ import plotly.express as px
 from app import app, colors
 # from app.utils import get_devices, get_files, matrix_sheet, current_state, change_state
 from app.devices import ToneGenerator, PowerSupply, TC, dummy_ToneGenerator, dummy_PowerSupply, dummy_TC
+
 import app.components as comp
 import app.utils as utils
+import app.functions as func
 
 # Debugging mode
-PowerSupply = dummy_PowerSupply
-ToneGenerator = dummy_ToneGenerator
-TC = dummy_TC
+# PowerSupply = dummy_PowerSupply
+# ToneGenerator = dummy_ToneGenerator
+# TC = dummy_TC
 # --------------
 
 global tone
@@ -39,6 +41,7 @@ tcs = TC([0x67, 0x60])
 
 app.config['suppress_callback_exceptions'] = True
 app.scripts.config.serve_locally = True
+
 
 @app.server.route('/data/<path:path>')
 def serve_static(path):
@@ -134,14 +137,14 @@ def connect(n_clicks, tone_port, power_port):
         conn = [False, False]
         try:
             tone = ToneGenerator(tone_port)
-            #tone = dummy_ToneGenerator(tone_port)
+            # tone = dummy_ToneGenerator(tone_port)
             conn[0] = True
         except SerialException as error:
             s += str(error)
 
         try:
             power = PowerSupply(power_port)
-            #power = dummy_PowerSupply(power_port)
+            # power = dummy_PowerSupply(power_port)
             conn[1] = True
         except SerialException as error:
             s += str(error)
@@ -171,16 +174,17 @@ def render_content(tab):
     elif tab == 'tab_2':
         return comp.exposure()
 
+
 @app.callback(
     [Output('freq_low', 'value'),
      Output('freq_high', 'value')],
     [Input('coil_type', 'value'),
-     Input('cap_type',  'value')]
+     Input('cap_type', 'value')]
 )
 def set_frequency_range(coil_type, cap_type):
     f = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil_type) &
-                        (utils.matrix_sheet['Capacitance [nF]'] == cap_type)].iloc[0]['Frequency [kHz]']
-    return f-5, f+5
+                               (utils.matrix_sheet['Capacitance [nF]'] == cap_type)].iloc[0]['Frequency [kHz]']
+    return f - 5, f + 5
 
 
 @app.callback(
@@ -191,7 +195,7 @@ def set_frequency_range(coil_type, cap_type):
 def tc_configure(type, res):
     tcs.set_type(type)
     tcs.set_adc(res)
-    return "Thermocouple configured to type %s and resolution %i!" %(type, res)
+    return "Thermocouple configured to type %s and resolution %i!" % (type, res)
 
 
 @app.callback(
@@ -207,6 +211,7 @@ def stop_exposure(n):
     exposing = False
     return 'STOP'
 
+
 # -------------------------------------------------------------------------------------------------------------------
 @app.callback(
     [Output('confirm_tuning', 'displayed'),
@@ -219,7 +224,7 @@ def confirm_tuning(clicks, coil, cap):
     if clicks == 0:
         return False, ""
     else:
-        return True, "Make sure that the coil has %s turns and the capacitor is at %s nF"%(str(coil), str(cap))
+        return True, "Make sure that the coil has %s turns and the capacitor is at %s nF" % (str(coil), str(cap))
 
 
 @app.callback(
@@ -230,7 +235,8 @@ def confirm_tuning(clicks, coil, cap):
 def start_tune_graphing(n, n_ints):
     if n is None:
         return 0
-    return n_ints+10
+    return n_ints + 10
+
 
 @app.callback(
     Output('tune_graph', 'figure'),
@@ -266,11 +272,8 @@ def update_tune_graph(n, filename, flow, fhigh):
 
     x = 'Frequency [Hz]'
     y = 'Current [A]'
-    fig = px.scatter(df, x, y)
-
-    fig.add_trace(
-        go.Scatter(x=df2[x], y=df2[y], mode='lines+markers')
-    )
+    fig = px.scatter(df1, x, y)
+    fig.add_scatter(x=df2[x], y=df2[y])
 
     fig.update_traces(mode='lines+markers')
     fig.update_xaxes()
@@ -290,9 +293,9 @@ def update_tune_graph(n, filename, flow, fhigh):
 )
 def tune(max_ints, flow, fhigh, coil, cap, filename):
     global tone, power, exposing, tuned, fres
-    if max_ints==0:
+    if max_ints == 0:
         return "Click tune to tune system"
-    #if n is None:
+    # if n is None:
     #    return "Click to tune system"
 
     if 'tone' not in globals() or 'power' not in globals():
@@ -306,26 +309,25 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
 
     exposing = True
 
-    filename = 'data/'+filename+"_tune.txt"
-    t_header = "\t".join(['T%i [degC]' %i for i in range(len(tcs))] )
+    filename = 'data/' + filename + "_tune.txt"
+    t_header = "\t".join(['T%i [degC]' % i for i in range(len(tcs))])
     header = 'Frequency [Hz]\tCurrent [A]\tVoltage [V]\t' + t_header
     with open(filename, 'w') as file:
-        file.write(header+"\n")
-
+        file.write(header + "\n")
 
     V = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil) &
-                     (utils.matrix_sheet['Capacitance [nF]'] == cap)].iloc[0]['Voltage [V]']
+                               (utils.matrix_sheet['Capacitance [nF]'] == cap)].iloc[0]['Voltage [V]']
     I = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil) &
-                     (utils.matrix_sheet['Capacitance [nF]'] == cap)].iloc[0]['Current [A]']
+                               (utils.matrix_sheet['Capacitance [nF]'] == cap)].iloc[0]['Current [A]']
 
     currents = []
 
     # Rough estimate
-    freqs = np.linspace(flow*1e3, fhigh*1e3, 11)
+    freqs = np.linspace(flow * 1e3, fhigh * 1e3, 11)
     tone.set_frequency(freqs[0])
     tone.set_output('ON')
 
-    power.set(V/3, I)
+    power.set(V / 3, I)
     power.set_output('ON')
     for f in freqs:
         if not exposing:
@@ -338,8 +340,8 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
         readingV = power.get_V().strip('V')
         temperatures = '\t'.join(list(map(str, tcs.get_T())))
         with open(filename, 'a') as file:
-            output = '%.1f\t%s\t%s\t'%(f, readingI, readingV) + temperatures
-            file.write(output+"\n")
+            output = '%.1f\t%s\t%s\t' % (f, readingI, readingV) + temperatures
+            file.write(output + "\n")
 
         currents.append(readingI)
 
@@ -347,11 +349,11 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
 
     with open(filename, 'a') as file:
         nan_space = ['#N/A' for i in range(len(header.split('\t')))]
-        file.write('\t'.join(nan_space)+'\n')
+        file.write('\t'.join(nan_space) + '\n')
 
     # Finer estimate
     currents = []
-    freqs = np.linspace(fmax-1e3, fmax+1e3, 5)
+    freqs = np.linspace(fmax - 1e3, fmax + 1e3, 5)
     for f in freqs:
         if not exposing:
             return 'Tuning stopped'
@@ -363,8 +365,8 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
         readingV = power.get_V().strip('V')
         temperatures = '\t'.join(list(map(str, tcs.get_T())))
         with open(filename, 'a') as file:
-            output = '%.1f\t%s\t%s\t'%(f, readingI, readingV) + temperatures
-            file.write(output+"\n")
+            output = '%.1f\t%s\t%s\t' % (f, readingI, readingV) + temperatures
+            file.write(output + "\n")
 
         currents.append(readingI)
 
@@ -372,11 +374,13 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
 
     power.set_default()
     exposing = False
-    
+
     tone.set_frequency(fres)
     tuned = True
 
-    return "Resonance frequency is %.1f kHz" %(fres*1e-3)
+    return "Resonance frequency is %.1f kHz" % (fres * 1e-3)
+
+
 # -------------------------------------------------------------------------------------------------------------------
 
 # #Exposure
@@ -386,8 +390,8 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
     State('exp_current', 'value')
 )
 def current_to_field(n, current):
-    if n is None:
-        raise dash.exceptions.PreventUpdate
+    # if n is None:
+    #     raise dash.exceptions.PreventUpdate
 
     global fres
 
@@ -395,11 +399,12 @@ def current_to_field(n, current):
         return '-1'
 
     try:
-        field = utils.current_to_field(fres*1e-3, float(current))
+        field = utils.current_to_field(fres * 1e-3, float(current))
     except TypeError as e:
         return str(e)
 
-    return "%.2f" %field
+    return "%.2f" % field
+
 
 @app.callback(
     Output('exp_current', 'value'),
@@ -417,11 +422,12 @@ def field_to_current(n, field):
 
     field = float(field)
     try:
-        power_current = utils.field_to_current(field, fres*1e-3)
+        power_current = utils.field_to_current(field, fres * 1e-3)
     except TypeError as e:
         return str(e)
 
-    return "%.2f"%power_current
+    return "%.2f" % power_current
+
 
 @app.callback(
     [Output('confirm_exposure', 'displayed'),
@@ -434,7 +440,7 @@ def confirm_exposure(clicks, exp_time, field):
     if clicks == 0:
         return False, ""
     else:
-        return True, "Expose %s mT for %s seconds?"%(str(field), str(exp_time))
+        return True, "Expose %s mT for %s seconds?" % (str(field), str(exp_time))
 
 
 @app.callback(
@@ -450,7 +456,7 @@ def start_exp_graphing(n, n_ints, exp_time, rec_time):
     elif not isinstance(exp_time, int) or not isinstance(rec_time, int):
         return n_ints
     else:
-        return n_ints+int(exp_time+rec_time)+5 #5 sec buffer
+        return n_ints + int(exp_time + rec_time) + 5  # 5 sec buffer
 
 
 @app.callback(
@@ -486,6 +492,7 @@ def update_exp_graph(n, filename, exp_time, rec_time):
 
     return fig
 
+
 @app.callback(
     Output('expose_div', 'children'),
     Input('exp_interval', 'max_intervals'),
@@ -511,8 +518,6 @@ def expose(max_ints, exp_time, rec_time, current, filename):
 
     if exposing:
         return "Experiment is running!"
-    exposing = True
-
 
     # Checks if current is numeric
     try:
@@ -522,53 +527,35 @@ def expose(max_ints, exp_time, rec_time, current, filename):
 
     filename = 'data/' + filename + "_exp.txt"
 
-    props = """#Resonance Frequency: %.3f kHz
-#Set Current: %.2f\n""" % (fres, current)
+    props = """#Resonance Frequency: %.3f kHz\n#Set Current: %.2f A\n""" % (fres, current)
 
     t_header = "\t".join(['T%i [degC]' % i for i in range(len(tcs))])
-    header = 'Time [s]\tCurrent [A]\tVoltage [V]\t' + t_header
+    header = 'Time [s]\tCurrent [A]\tVoltage [V]\t' + t_header + "\tState"
     with open(filename, 'w') as file:
         file.write(props + header + "\n")
 
     tone.set_output('ON')
 
+    time.sleep(1 - (time.time() % 1))
     start = time.time()
+    exposing = True
+    state = 'EXPOSING'
     power.set(V=45, I=current)
     power.set_output('ON')
-
-    while (time.time() - start) < exp_time:
+    while (time.time() - start) < (exp_time+rec_time):
         if not exposing:
             return "Experiment stopped"
 
-        t = time.time()
-        V = power.get_V().strip('V')
-        I = power.get_I().strip('A')
-        temperatures = '\t'.join(list(map(str, tcs.get_T())))
+        func.measure(filename, start, power, tcs, state=state)
 
-        output = "%f\t%s\t%s\t" %(t-start, I, V) + temperatures
-        with open(filename, 'a') as file:
-            file.write(output+"\n")
+        if (time.time() - start) > exp_time-0.1 and state == 'EXPOSING':  # 0.1 s to account for small drifts
+            # Changing state
+            state = 'WAIT'
 
-        time.sleep(1)
+            # Sets output to 0V and 0A and output to off
+            power.set_default()
 
-    power.set_default()
-
-    # Records after exposure:
-    rec_start = time.time()
-    while (time.time() - rec_start) < rec_time+1:
-        if not exposing:
-            return "Experiment stopped"
-
-        t = time.time()
-        V = power.get_V().strip('V')
-        I = power.get_I().strip('A')
-        temperatures = '\t'.join(list(map(str, tcs.get_T())))
-
-        output = "%f\t%s\t%s\t" %(t-start, I, V) + temperatures
-        with open(filename, 'a') as file:
-            file.write(output+"\n")
-
-        time.sleep(1)
+        time.sleep(1 - (time.time() % 1))
 
     exposing = False
     return "Exposure done"
@@ -587,19 +574,20 @@ def download_file(n_clicks, data, rows):
         files = [data[r]['Filename'] for r in rows]
 
         if len(files) == 1:
-            return send_file(directory+files[0]), ''
+            return send_file(directory + files[0]), ''
         else:
             # create a ZipFile object
-            zip_obj = ZipFile(directory+'measurements.zip', 'w')
+            zip_obj = ZipFile(directory + 'measurements.zip', 'w')
             # Add multiple files to the zip
             for f in files:
-                zip_obj.write(directory+f, arcname=f)
+                zip_obj.write(directory + f, arcname=f)
             # close the Zip File
             zip_obj.close()
-            return send_file(directory+"measurements.zip", mime_type='application/zip'), ''
+            return send_file(directory + "measurements.zip", mime_type='application/zip'), ''
 
     else:
         return None, None
+
 
 @app.callback(
     Output('files_list', 'data'),
