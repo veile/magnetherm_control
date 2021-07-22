@@ -78,34 +78,66 @@ def temp_options():
            {'label': '5 ms',   'value' : 12}]
     return html.Div(
         style={
-                'width': '20%',
-                'height': 270,
-                # 'float': 'left',
-                'display': 'inline-block',
-                'backgroundColor': colors['background'],
-                'padding': '20px',
-                'marginLeft': 5,
-                'marginRight': 5,
-                'borderStyle': 'solid',
-                'borderColor': '#616161'
+            'width': '20%',
+            'height': 270,
+            # 'float': 'left',
+            'display': 'inline-block',
+            'backgroundColor': colors['background'],
+            # 'padding': '20px',
+            # 'marginLeft': 5,
+            # 'marginRight': 5,
+            # 'borderStyle': 'solid',
+            # 'borderColor': '#616161'
                },
         children=[
-            html.Label("Thermocouple type"),
-            dcc.Dropdown(
-                id='tc_type',
-                options=types,
-                value='N'
+            html.Div(
+                style={
+                    'borderStyle': 'solid',
+                    'borderColor': '#616161',
+                    'padding': '20px',
+                    'marginLeft': 5,
+                    'marginRight': 5,
+                    'height': 160,
+                },
+                children=[
+                    html.Label("Thermocouple type"),
+                    dcc.Dropdown(
+                        id='tc_type',
+                        options=types,
+                        value='N'
+                    ),
+                    html.Br(),
+                    html.Label("Sampling rate"),
+                    dcc.Dropdown(
+                        id='tc_rate',
+                        options=res,
+                        value=18
+                    )
+                ]
             ),
-            html.Br(),
-            html.Label("Sampling rate"),
-            dcc.Dropdown(
-                id='tc_rate',
-                options=res,
-                value=18
-            ),
-            html.Br(),
-            html.Label("Filename (.txt)"),
-            dcc.Input(id='filename-input', type='text', placeholder='filename')
+            html.Div(
+                style={
+                    'borderStyle': 'solid',
+                    'borderColor': '#616161',
+                    'padding': '20px',
+                    'marginLeft': 5,
+                    'marginRight': 5,
+                    'height': 65
+                },
+                children=[
+                    html.Div(style={'display': 'inline', 'float': 'left'},
+                        children=[
+                            html.Label("Filename (.txt)"),
+                            dcc.Input(id='filename-input', type='text', placeholder='filename'),
+                        ]),
+                    html.Div(style={'display': 'inline', 'float': 'right'},
+                        children=[
+                            html.Label("dt [s]"),
+                            dcc.Input(id='sample_rate', type='number', value=1, style={'width': '80px'})
+                        ]
+                    )
+                ]
+            )
         ]
     )
 
@@ -134,7 +166,8 @@ def stop():
                        style={'background-color': 'red',
                               'height': '50px',
                               'width': '100px',
-                              'font-weight': 'bold'})
+                              'font-weight': 'bold',
+                              })
 
 def tabs():
     return html.Div(
@@ -246,40 +279,21 @@ def exposure():
             html.Div(
                 style={
                     'width': '25%',
-                    'float': 'left',
+                    # 'float': 'left',
+                    'display': 'inline-block',
                     'padding': '20px',
                 },
                 children=[
+                    html.Label("Record before exposure [s]"),
+                    dcc.Input(
+                        id="rec_before", type='number',
+                        style={'width': '200px'}, persistence=True, value=30
+                    ),
+                    html.Br(), html.Br(),
                     html.Label("Power Supply Current [A]"),
                     dcc.Input(
                         id="exp_current", type='number', placeholder='',
                         style={'width': '200px'}, persistence=True, value=1
-                    ),
-                    html.Br(), html.Br(),
-                    html.Label("Exposure Time [s]"),
-                    dcc.Input(
-                        id="exp_time", type='number', placeholder='',
-                        style={'width': '200px'}, persistence=True, value=10
-                    ),
-                    html.Br(), html.Br(),
-                ]
-            ),
-            html.Div(
-                style={'width': '25%',
-                        'display': 'inline-block',
-                        'padding': '20px',
-                        },
-                children=[
-                    html.Label("Exposure Field [mT]"),
-                    dcc.Input(
-                        id="exp_field", type='number', placeholder='',
-                        style={'width': '200px'}, persistence=True, value=-1
-                    ),
-                    html.Br(), html.Br(),
-                    html.Label("Record after exposure [s]"),
-                    dcc.Input(
-                        id="rec_time", type='number', placeholder='',
-                        style={'width': '200px'}, persistence=True, value=0
                     ),
                     html.Br(), html.Br(),
                 ]
@@ -290,7 +304,32 @@ def exposure():
                        'padding': '20px',
                        },
                 children=[
-                    html.Br(), html.Br(), html.Br(), html.Br(),
+                    html.Label("Exposure Time [s]"),
+                    dcc.Input(
+                        id="exp_time", type='number', placeholder='',
+                        style={'width': '200px'}, persistence=True, value=60
+                    ),
+                    html.Br(), html.Br(),
+                    html.Label("Exposure Field [mT]"),
+                    dcc.Input(
+                        id="exp_field", type='number',
+                        style={'width': '200px'}, persistence=True, value=-1
+                    ),
+                    html.Br(), html.Br(),
+                ]
+            ),
+            html.Div(
+                style={'width': '25%',
+                       'display': 'inline-block',
+                       'padding': '20px',
+                       },
+                children=[
+                    html.Label('Record after exposure [s]'),
+                    dcc.Input(
+                        id="rec_after", type='number',
+                        style={'width': '200px'}, persistence=True, value=180
+                    ),
+                    html.Br(), html.Br(), html.Br(),
                     html.Button("Start", id="exp_button", style={'width': '200px'},
                                 n_clicks=0, disabled=False),
                     # dbc.Progress(id="progress_expose", value=0, striped=True, animated=True),
@@ -298,7 +337,8 @@ def exposure():
                         id="exposing",
                         children=[html.Div(id='expose_div')],
                         type="circle",
-                    )
+                    ),
+                    # html.Br(),
                 ]
             )
         ],

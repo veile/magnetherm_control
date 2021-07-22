@@ -63,6 +63,7 @@ index_page = html.Div(
     children=[
         dcc.Markdown('# Magnetherm Dashboard', id='header',
                      style={'textAlign': 'center'}),
+        html.Div(style={'textAlign': 'center'}, children=[comp.stop()]),
         # html.Br(),
         dcc.Link('Go to data', href='/data'),
         # html.Div(dcc.Markdown(utils.current_state(), id='current_state') ),
@@ -75,10 +76,6 @@ index_page = html.Div(
                      comp.graph(),
                  ]),
         comp.tabs(),
-        # comp.tune_interval(),
-        html.Br(),
-        comp.stop(),
-        html.Div(id='test_div')
     ]
 )
 
@@ -448,25 +445,24 @@ def confirm_exposure(clicks, exp_time, field):
     Input('confirm_exposure', 'submit_n_clicks'),
     [State('exp_interval', 'n_intervals'),
      State('exp_time', 'value'),
-     State('rec_time', 'value')]
+     State('rec_before', 'value'),
+     State('rec_after', 'value')]
 )
-def start_exp_graphing(n, n_ints, exp_time, rec_time):
+def start_exp_graphing(n, n_ints, exp_time, rec_before, rec_after):
     if n is None:
         return 0
-    elif not isinstance(exp_time, int) or not isinstance(rec_time, int):
+    elif not all(isinstance(x, int) for x in [exp_time, rec_before, rec_after]):
         return n_ints
     else:
-        return n_ints + int(exp_time + rec_time) + 5  # 5 sec buffer
+        return n_ints + exp_time + rec_before + rec_after + 5  # 5 sec buffer
 
 
 @app.callback(
     Output('exp_graph', 'figure'),
     Input('exp_interval', 'n_intervals'),
-    [State('filename-input', 'value'),
-     State('exp_time', 'value'),
-     State('rec_time', 'value')]
+    State('filename-input', 'value')
 )
-def update_exp_graph(n, filename, exp_time, rec_time):
+def update_exp_graph(n, filename):
     if n is None:
         raise dash.exceptions.PreventUpdate
     if filename is None:
@@ -497,11 +493,13 @@ def update_exp_graph(n, filename, exp_time, rec_time):
     Output('expose_div', 'children'),
     Input('exp_interval', 'max_intervals'),
     [State('exp_time', 'value'),
-     State('rec_time', 'value'),
+     State('rec_before', 'value'),
+     State('rec_after', 'value'),
      State('exp_current', 'value'),
-     State('filename-input', 'value')]
+     State('filename-input', 'value'),
+     State('sample_rate', 'value')]
 )
-def expose(max_ints, exp_time, rec_time, current, filename):
+def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
     global power, tone, exposing, tuned
 
     if max_ints == 0:
@@ -513,7 +511,7 @@ def expose(max_ints, exp_time, rec_time, current, filename):
     if not tuned:
         return "Please tune the system first!"
 
-    if not isinstance(exp_time, int) or not current or not isinstance(rec_time, int):
+    if not all(isinstance(x, int) for x in [exp_time, rec_before, rec_after]):
         return "Please enter valid values"
 
     if exposing:
@@ -535,27 +533,31 @@ def expose(max_ints, exp_time, rec_time, current, filename):
         file.write(props + header + "\n")
 
     tone.set_output('ON')
-
-    time.sleep(1 - (time.time() % 1))
-    start = time.time()
     exposing = True
-    state = 'EXPOSING'
-    power.set(V=45, I=current)
-    power.set_output('ON')
-    while (time.time() - start) < (exp_time+rec_time):
+    state = 'BEFORE'
+
+    # Initially sets the time to a number divisible by the sample rate
+    time.sleep(dt - (time.time() % dt))
+    start = time.time()
+    while (time.time() - start) < (exp_time+rec_before+rec_after):
         if not exposing:
             return "Experiment stopped"
 
         func.measure(filename, start, power, tcs, state=state)
 
-        if (time.time() - start) > exp_time-0.1 and state == 'EXPOSING':  # 0.1 s to account for small drifts
+        if (time.time() - start) > rec_before-0.1 and state == 'BEFORE':
+            state = 'EXPOSING'
+            power.set(V=45, I=current)
+            power.set_output('ON')
+
+        if (time.time() - start) > (rec_before+exp_time)-0.1 and state == 'EXPOSING':  # 0.1 s to account for small drifts
             # Changing state
             state = 'WAIT'
 
             # Sets output to 0V and 0A and output to off
             power.set_default()
 
-        time.sleep(1 - (time.time() % 1))
+        time.sleep(dt - (time.time() % dt))
 
     exposing = False
     return "Exposure done"
