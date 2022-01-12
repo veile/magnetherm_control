@@ -12,6 +12,7 @@ from dash_extensions import Download
 from app import colors
 from app.utils import get_files, matrix_sheet
 
+from datetime import datetime
 
 # def refresh():
 #     return dcc.Interval(id='refresh', interval=5e3)
@@ -128,7 +129,7 @@ def temp_options():
                     html.Div(style={'display': 'inline', 'float': 'left'},
                         children=[
                             html.Label("Filename (.txt)"),
-                            dcc.Input(id='filename-input', type='text', placeholder='filename'),
+                            dcc.Input(id='filename-input', type='text', value=datetime.now().strftime('%Y-%m-%d')),
                         ]),
                     html.Div(style={'display': 'inline', 'float': 'right'},
                         children=[

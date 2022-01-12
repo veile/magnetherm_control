@@ -200,14 +200,14 @@ def tc_configure(type, res):
     Input('stop_button', 'n_clicks')
 )
 def stop_exposure(n):
-    if n == 0:
-        return 'STOP'
+    if n is None:
+        raise dash.exceptions.PreventUpdate
+
 
     global exposing, power
     power.set_default()
     exposing = False
     return 'STOP'
-
 
 # -------------------------------------------------------------------------------------------------------------------
 @app.callback(
@@ -238,11 +238,9 @@ def start_tune_graphing(n, n_ints):
 @app.callback(
     Output('tune_graph', 'figure'),
     Input('tune_interval', 'n_intervals'),
-    [State('filename-input', 'value'),
-     State('freq_low', 'value'),
-     State('freq_high', 'value')]
+    State('filename-input', 'value')
 )
-def update_tune_graph(n, filename, flow, fhigh):
+def update_tune_graph(n, filename):
     if n is None:
         raise dash.exceptions.PreventUpdate
     if filename is None:
@@ -256,21 +254,22 @@ def update_tune_graph(n, filename, flow, fhigh):
     except:
         raise dash.exceptions.PreventUpdate
 
-    if df.isnull().any().any():
-        idx = np.where(df.isna().any(1))[0][0]
-
-        df1 = df[:idx]
-        df2 = df[idx:]
-
-    else:
-        df1 = df
-        df2 = df[-1:]
-
-
     x = 'Frequency [Hz]'
     y = 'Current [A]'
-    fig = px.scatter(df1, x, y)
-    fig.add_scatter(x=df2[x], y=df2[y])
+
+    # Splitting DataFrame rough/fine sweep
+    idx = df[x] < df[x].shift()
+    if idx.sum() != 0:
+        split = np.where(idx==True)[0][0]
+    else:
+        split = df[x].size
+
+    df1 = df[:split]
+    df2 = df[split:]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df1[x], y=df1[y], name='Rough Sweep'))
+    fig.add_trace(go.Scatter(x=df2[x], y=df2[y], name='Fine Sweep'))
 
     fig.update_traces(mode='lines+markers')
     fig.update_xaxes()
@@ -344,9 +343,9 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
 
     fmax = freqs[np.argmax(currents)]
 
-    with open(filename, 'a') as file:
-        nan_space = ['#N/A' for i in range(len(header.split('\t')))]
-        file.write('\t'.join(nan_space) + '\n')
+    # with open(filename, 'a') as file:
+    #     nan_space = ['#N/A' for i in range(len(header.split('\t')))]
+    #     file.write('\t'.join(nan_space) + '\n')
 
     # Finer estimate
     currents = []
@@ -571,24 +570,25 @@ def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
      State('files_list', 'selected_rows')]
 )
 def download_file(n_clicks, data, rows):
-    if n_clicks != 0:
-        directory = os.getcwd() + "/data/"
-        files = [data[r]['Filename'] for r in rows]
+    if n_clicks == 0:
+        raise dash.exceptions.PreventUpdate
 
-        if len(files) == 1:
-            return send_file(directory + files[0]), ''
-        else:
-            # create a ZipFile object
-            zip_obj = ZipFile(directory + 'measurements.zip', 'w')
-            # Add multiple files to the zip
-            for f in files:
-                zip_obj.write(directory + f, arcname=f)
-            # close the Zip File
-            zip_obj.close()
-            return send_file(directory + "measurements.zip", mime_type='application/zip'), ''
 
+    directory = os.getcwd() + "/data/"
+    files = [data[r]['Filename'] for r in rows]
+
+    if len(files) == 1:
+        return send_file(directory + files[0]), ''
     else:
-        return None, None
+        # create a ZipFile object
+        zip_obj = ZipFile(directory + 'measurements.zip', 'w')
+        # Add multiple files to the zip
+        for f in files:
+            zip_obj.write(directory + f, arcname=f)
+        # close the Zip File
+        zip_obj.close()
+        return send_file(directory + "measurements.zip", mime_type='application/zip'), ''
+
 
 
 @app.callback(
