@@ -10,7 +10,7 @@ from dash_extensions import Download
 
 
 from app import colors
-from app.utils import get_files, matrix_sheet
+from app.utils import get_files, matrix_sheet, get_dirs
 
 from datetime import datetime
 
@@ -128,11 +128,14 @@ def temp_options():
                 children=[
                     html.Div(style={'display': 'inline', 'float': 'left'},
                         children=[
+                            dcc.Dropdown(id='exp_selection', options=[{'label': v, 'value': v} for v in get_dirs()],
+                                         value='data'),
                             html.Label("Filename (.txt)"),
                             dcc.Input(id='filename-input', type='text', value=datetime.now().strftime('%Y-%m-%d')),
                         ]),
                     html.Div(style={'display': 'inline', 'float': 'right'},
                         children=[
+                            html.Button('New', id='add_experiment', style={'width': '80px', 'textAlign': 'center'}),
                             html.Label("dt [s]"),
                             dcc.Input(id='sample_rate', type='number', value=1, style={'width': '80px'})
                         ]
@@ -358,24 +361,18 @@ def files_list():
         children=[
             DataTable(
                 id='files_list', columns=[{'name': 'Filename', 'id': 'Filename'},
-                                          {'name': 'Filesize', 'id': 'Filesize'},
-                                          {'name': 'Last Modified', 'id': 'Last Modified'},
-                                          {'name': 'File Created', 'id': 'File Created'}],
+                                          {'name': 'Filesize', 'id': 'Filesize'}],
                 data=data,
-                style_cell={'textAlign': 'center'},
+                style_cell={'textAlign': 'left'},
                 style_header={
-                    'textAlign': 'center',
+                    'textAlign': 'left',
                     'fontWeight': 'bold',
                     'fontSize': 12
                 },
                 page_size=20,
                 style_cell_conditional=[
                     {'if': {'column_id': 'Filename'},
-                     'width': '45%'},
-                    {'if': {'column_id': 'Last Modified'},
-                     'width': '20%'},
-                    {'if': {'column_id': 'File Created'},
-                     'width': '20%'},
+                     'width': '90%'},
                     {'if': {'column_id': 'Filesize'},
                      'width': '10%'},
                 ],

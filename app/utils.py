@@ -68,12 +68,14 @@ def get_devices():
 
 
 def get_files(dir="./data/"):
-    files = os.listdir(dir)
-    return [{'Filename': f,
-             'Filesize': convert_size(os.path.getsize(dir+f)),
-             'Last Modified': datetime.fromtimestamp(os.path.getmtime(dir+f)).strftime('%Y-%m-%d'),
-             'File Created': datetime.fromtimestamp(os.path.getctime(dir+f)).strftime('%Y-%m-%d %H:%M')}
+    # files = os.listdir(dir)
+    files = glob.glob(dir+'*.txt')
+    return [{'Filename': os.path.basename(f),
+             'Filesize': convert_size(os.path.getsize(f))}
             for f in files]
+
+def get_dirs(dir="./data"):
+    return [os.path.basename(x[0]) for x in os.walk(dir)]
 
 
 # def current_state():

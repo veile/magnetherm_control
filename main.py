@@ -25,9 +25,9 @@ import app.utils as utils
 import app.functions as func
 
 # Debugging mode
-# PowerSupply = dummy_PowerSupply
-# ToneGenerator = dummy_ToneGenerator
-# TC = dummy_TC
+PowerSupply = dummy_PowerSupply
+ToneGenerator = dummy_ToneGenerator
+TC = dummy_TC
 # --------------
 
 global tone
@@ -208,6 +208,18 @@ def stop_exposure(n):
     power.set_default()
     exposing = False
     return 'STOP'
+
+
+# Look into using Modal for popup input
+# @app.callback(
+#     Output('exp_selection', 'options'),
+#     Input('add_experiment', 'n_clicks')
+# )
+# def update_exp_selection(n):
+#     if n is None:
+#         raise dash.exceptions.PreventUpdate
+#
+#     os.make
 
 # -------------------------------------------------------------------------------------------------------------------
 @app.callback(
