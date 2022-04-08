@@ -18,7 +18,7 @@ import plotly.express as px
 
 from app import app, colors
 # from app.utils import get_devices, get_files, matrix_sheet, current_state, change_state
-from app.devices import ToneGenerator, PowerSupply, TC, dummy_ToneGenerator, dummy_PowerSupply, dummy_TC
+from app.devices import ToneGenerator, PowerSupply, fiber, TC, dummy_ToneGenerator, dummy_PowerSupply, dummy_TC, dummy_fiber
 
 import app.components as comp
 import app.utils as utils
@@ -28,16 +28,18 @@ import app.functions as func
 # PowerSupply = dummy_PowerSupply
 # ToneGenerator = dummy_ToneGenerator
 # TC = dummy_TC
+# fiber = dummy_fiber
 # --------------
 
 global tone
 global power
 global fres
+global temp
 
 exposing = False
 tuned = False
+temp = None
 
-tcs = TC([0x67, 0x60])
 
 app.config['suppress_callback_exceptions'] = True
 app.scripts.config.serve_locally = True
@@ -153,6 +155,38 @@ def connect(n_clicks, tone_port, power_port):
 
 
 @app.callback(
+    Output('temp_div', 'children'),
+    Input('t_sensor', 'value')
+)
+def choose_temp_sensor(sensor):
+    global temp
+    if sensor is None:
+        raise dash.exceptions.PreventUpdate
+
+    if sensor == 'TC':
+        temp = TC([0x67, 0x60])
+        return comp.thermo_div()
+    if sensor == 'OFT':
+        temp = None
+        return comp.fiber_div()
+
+
+@app.callback(
+    Output('fiber_connect_div', 'children'),
+    Input('fiber_connect', 'n_clicks'),
+    State('fiber_com', 'value')
+)
+def fiber_connect(n, port):
+    global temp
+    if n is None:
+        raise dash.exceptions.PreventUpdate
+
+    temp = fiber(port)
+    return 'Connected'
+
+
+
+@app.callback(
     [Output('tone_com', 'options'), Output('power_com', 'options')],
     Input('header', 'children')
 )
@@ -190,8 +224,8 @@ def set_frequency_range(coil_type, cap_type):
      Input('tc_rate', 'value'))
 )
 def tc_configure(type, res):
-    tcs.set_type(type)
-    tcs.set_adc(res)
+    temp.set_type(type)
+    temp.set_adc(res)
     return "Thermocouple configured to type %s and resolution %i!" % (type, res)
 
 
@@ -303,10 +337,13 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
     if filename is None:
         return "Please input a filename"
 
+    if temp is None:
+        return "Please choose temperature sensor"
+
     exposing = True
 
     filename = 'data/' + filename + "_tune.txt"
-    t_header = "\t".join(['T%i [degC]' % i for i in range(len(tcs))])
+    t_header = "\t".join(['T%i [degC]' % i for i in range(len(temp))])
     header = 'Frequency [Hz]\tCurrent [A]\tVoltage [V]\t' + t_header
     with open(filename, 'w') as file:
         file.write(header + "\n")
@@ -334,7 +371,7 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
 
         readingI = power.get_I().strip('A')
         readingV = power.get_V().strip('V')
-        temperatures = '\t'.join(list(map(str, tcs.get_T())))
+        temperatures = '\t'.join(list(map(str, temp.get_T())))
         with open(filename, 'a') as file:
             output = '%.1f\t%s\t%s\t' % (f, readingI, readingV) + temperatures
             file.write(output + "\n")
@@ -359,7 +396,7 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
 
         readingI = power.get_I().strip('A')
         readingV = power.get_V().strip('V')
-        temperatures = '\t'.join(list(map(str, tcs.get_T())))
+        temperatures = '\t'.join(list(map(str, temp.get_T())))
         with open(filename, 'a') as file:
             output = '%.1f\t%s\t%s\t' % (f, readingI, readingV) + temperatures
             file.write(output + "\n")
@@ -466,6 +503,8 @@ def update_exp_graph(n, filename):
         raise dash.exceptions.PreventUpdate
     if filename is None:
         raise dash.exceptions.PreventUpdate
+    if temp is None:
+        raise dash.exceptions.PreventUpdate
 
     filename = 'data/' + filename + "_exp.txt"
 
@@ -476,10 +515,9 @@ def update_exp_graph(n, filename):
         raise dash.exceptions.PreventUpdate
 
     x = 'Time [s]'
-    y1 = 'T0 [degC]'
-    y2 = 'T1 [degC]'
-
-    fig = px.scatter(df, x, y=[y1, y2])
+    ys = [y for y in df.columns if y.startswith('T')]
+    # ys = "\t".join(['T%i [degC]' % i for i in range(len(temp))])
+    fig = px.scatter(df, x, y=ys)
 
     fig.update_traces(mode='lines+markers')
     fig.update_xaxes(autorange=True)
@@ -516,6 +554,9 @@ def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
     if exposing:
         return "Experiment is running!"
 
+    if temp is None:
+        "Please select temperature sensor."
+
     # Checks if current is numeric
     try:
         current = float(current)
@@ -526,7 +567,7 @@ def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
 
     props = """#Resonance Frequency: %.3f kHz\n#Set Current: %.2f A\n""" % (fres, current)
 
-    t_header = "\t".join(['T%i [degC]' % i for i in range(len(tcs))])
+    t_header = "\t".join(['T%i [degC]' % i for i in range(len(temp))])
     header = 'Time [s]\tCurrent [A]\tVoltage [V]\t' + t_header + "\tState"
     with open(filename, 'w') as file:
         file.write(props + header + "\n")
@@ -542,7 +583,7 @@ def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
         if not exposing:
             return "Experiment stopped"
 
-        func.measure(filename, start, power, tcs, state=state)
+        func.measure(filename, start, power, temp, state=state)
 
         if (time.time() - start) > rec_before-0.1 and state == 'BEFORE':
             state = 'EXPOSING'

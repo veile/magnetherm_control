@@ -10,7 +10,7 @@ from dash_extensions import Download
 
 
 from app import colors
-from app.utils import get_files, matrix_sheet
+from app.utils import get_files, get_devices
 
 from datetime import datetime
 
@@ -70,17 +70,12 @@ def com_inputs():
 
 
 def temp_options():
-    types = [{'label' : 'Type K', 'value' : 'K'},
-             {'label' : 'Type J', 'value' : 'J'},
-             {'label' : 'Type N', 'value' : 'N'}]
-    res = [{'label': '300 ms', 'value': 18},
-           {'label': '80 ms',  'value': 16},
-           {'label': '20 ms',  'value': 14},
-           {'label': '5 ms',   'value' : 12}]
+    sensors = [{'label': 'Thermocouple', 'value': 'TC'},
+               {'label': 'Optical Fiber', 'value': 'OFT'}]
     return html.Div(
         style={
             'width': '20%',
-            'height': 270,
+            'height': 290,
             # 'float': 'left',
             'display': 'inline-block',
             'backgroundColor': colors['background'],
@@ -98,21 +93,17 @@ def temp_options():
                     'padding': '20px',
                     'marginLeft': 5,
                     'marginRight': 5,
-                    'height': 160,
+                    'height': 180,
                 },
                 children=[
-                    html.Label("Thermocouple type"),
+                    html.Label("Temperature Sensor"),
                     dcc.Dropdown(
-                        id='tc_type',
-                        options=types,
-                        value='N'
+                        id='t_sensor',
+                        options=sensors
                     ),
-                    html.Br(),
-                    html.Label("Sampling rate"),
-                    dcc.Dropdown(
-                        id='tc_rate',
-                        options=res,
-                        value=18
+                    html.Div(
+                        children=[],
+                        id = 'temp_div'
                     )
                 ]
             ),
@@ -123,7 +114,7 @@ def temp_options():
                     'padding': '20px',
                     'marginLeft': 5,
                     'marginRight': 5,
-                    'height': 65
+                    'height': 45
                 },
                 children=[
                     html.Div(style={'display': 'inline', 'float': 'left'},
@@ -142,6 +133,41 @@ def temp_options():
         ]
     )
 
+
+def thermo_div():
+    types = [{'label': 'Type K', 'value': 'K'},
+             {'label': 'Type J', 'value': 'J'},
+             {'label': 'Type N', 'value': 'N'}]
+    res = [{'label': '300 ms', 'value': 18},
+           {'label': '80 ms',  'value': 16},
+           {'label': '20 ms',  'value': 14},
+           {'label': '5 ms',   'value' : 12}]
+    return [html.Label("Thermocouple type"),
+            dcc.Dropdown(
+                id='tc_type',
+                options=types,
+                value='N'
+            ),
+            html.Label("Sampling rate"),
+            dcc.Dropdown(
+                id='tc_rate',
+                options=res,
+                value=18
+            )]
+
+
+def fiber_div():
+    options_list = get_devices()
+    options = [{'label': a, 'value': a} for a in options_list]
+    return [html.Br(),
+            html.Label("Choose USB port"),
+            dcc.Dropdown(
+                id='fiber_com',
+                options=options,
+                value='N'
+            ),
+            html.Button('Connect', id='fiber_connect'),
+            html.Div(children='', id='fiber_connect_div')]
 
 def graph():
     return html.Div(

@@ -9,3 +9,4 @@ dash_extensions
 dash_table
 mcp9600
 smbus
+osensapy

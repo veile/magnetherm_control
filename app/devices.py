@@ -8,6 +8,8 @@ import serial
 import time
 import random
 import sys
+import osensapy
+
 
 if sys.platform.startswith('linux'):
     from mcp9600 import MCP9600
@@ -165,14 +167,26 @@ class PowerSupply():
         status = V+I+OP
         return status
 
+
+class fiber():
+    def __init__(self, port):
+        self.transmitter = osensapy.Transmitter(port, 247, baudrate=115200)
+
+    def __len__(self):
+        return 1
+
+    def get_T(self):
+        return [self.transmitter.read_channel_temp('A')]
+
+
 class TC():
     def __init__(self, addresses):
         for i in range(10):
-          	try:
-          		self.mcp = [MCP9600(a) for a in addresses]
-          	except:
-          		print("Attempt %i out of 10" %i)
-          		continue
+            try:
+                self.mcp = [MCP9600(a) for a in addresses]
+            except:
+                print("Attempt %i out of 10" %i)
+                continue
 
     def __len__(self):
         return len(self.mcp)
@@ -328,6 +342,17 @@ class dummy_PowerSupply():
         self.set_output('OFF')
         self.set(0, 0)
 
+
+class dummy_fiber():
+    def __init__(self, port):
+        self.port = port
+
+    def __len__(self):
+        return 1
+
+    def get_T(self):
+        T = [random.randint(50, 100)]
+        return T
 
 class dummy_TC():
     def __init__(self, addresses):
