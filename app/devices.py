@@ -8,7 +8,7 @@ import serial
 import time
 import random
 import sys
-import osensapy
+from osensapy import osensapy
 
 
 if sys.platform.startswith('linux'):
