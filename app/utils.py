@@ -7,34 +7,36 @@ import math
 import serial.tools.list_ports
 from datetime import datetime
 
+matrix_sheet = pd.read_xml('config.nth', xpath='//CapacitorData/CapacitorDataClass')
+matrix_sheet['CoilTurns'] = [9,9,9,9,9, 17,17,17,17,17, 18,18,18,18,18]
 
-matrix_sheet = pd.DataFrame(
-    np.array([
-        [9, 200, 161.3,     23.5,   24.6,   23],
-        [9, 88,  242,       26,     21.8,   20],
-        [9, 26,  405.45,    31.2,   20.5,   16],
-        [9, 15,  572.6,     31.8,   17.3,   14],
-        [9, 6.2, 924.6,     31.4,   13.4,   12],
-        [17, 200, 105.2,     26.77,  17,     25],
-        [17, 88,  158.12,    26.25,  13.55,  17],
-        [17, 26,  264.8,     36,     14.1,   17],
-        [17, 15,  373.85,    40.4,   13.5,   16],
-        [17, 6.2, 602.5,     43.4,   12,     12],
-        [18, 200, 161.5,     36.2,   28,     46],
-        [18, 88,  242.3,     40.2,   23.85,  39],
-        [18, 26, 406,       40.9,   20,     32],
-        [18, 15,  573.5,     46.8,   19,     29],
-        [18, 6.2,  927.7,     38.3,   13.5,   18]
-    ]),
-    columns=[
-        "Coil Turns",
-        "Capacitance [nF]",
-        "Frequency [kHz]",
-        "Voltage [V]",
-        "Current [A]",
-        "Flux Density [mT]"
-    ]
-)
+# matrix_sheet = pd.DataFrame(
+#     np.array([
+#         [9, 200, 161.3,     23.5,   24.6,   23],
+#         [9, 88,  242,       26,     21.8,   20],
+#         [9, 26,  405.45,    31.2,   20.5,   16],
+#         [9, 15,  572.6,     31.8,   17.3,   14],
+#         [9, 6.2, 924.6,     31.4,   13.4,   12],
+#         [17, 200, 105.2,     26.77,  17,     25],
+#         [17, 88,  158.12,    26.25,  13.55,  17],
+#         [17, 26,  264.8,     36,     14.1,   17],
+#         [17, 15,  373.85,    40.4,   13.5,   16],
+#         [17, 6.2, 602.5,     43.4,   12,     12],
+#         [18, 200, 161.5,     36.2,   28,     46],
+#         [18, 88,  242.3,     40.2,   23.85,  39],
+#         [18, 26, 406,       40.9,   20,     32],
+#         [18, 15,  573.5,     46.8,   19,     29],
+#         [18, 6.2,  927.7,     38.3,   13.5,   18]
+#     ]),
+#     columns=[
+#         "Coil Turns",
+#         "Capacitance [nF]",
+#         "Frequency [kHz]",
+#         "Voltage [V]",
+#         "Current [A]",
+#         "Flux Density [mT]"
+#     ]
+# )
 
 # B = k1*I
 mu0 = 4 * np.pi * 1e-7
@@ -103,19 +105,30 @@ def get_files(dir="./data/"):
 #     return float(frequency)
 
 
-def coil_current(f, power_current):
-    return k2(f)*power_current
+def current_to_field(psu_amp, CapacitorName, CoilTurns):
+    k = matrix_sheet.loc[(matrix_sheet['CoilTurns'] == CoilTurns) &
+                         (matrix_sheet['CapacitorName'] == CapacitorName)]['CorrelationFactor']
+    return k*psu_amp
 
 
-def current_to_field(f, power_current, r=18e-3, L=53e-3, N=18):
-    I = coil_current(f, power_current)
-    return k1*I
+def field_to_current(field, CapacitorName, CoilTurns):
+    k = matrix_sheet.loc[(matrix_sheet['CoilTurns'] == CoilTurns) &
+                         (matrix_sheet['CapacitorName'] == CapacitorName)]['CorrelationFactor']
+    return field/k
 
-def field_to_current(field, f):
-    mu0 = 4*np.pi*1e-7
-    I = field/k1
-
-    return I/k2(f)
+# def coil_current(f, power_current):
+#     return k2(f)*power_current
+#
+#
+# def current_to_field(f, power_current, r=18e-3, L=53e-3, N=18):
+#     I = coil_current(f, power_current)
+#     return k1*I
+#
+# def field_to_current(field, f):
+#     mu0 = 4*np.pi*1e-7
+#     I = field/k1
+#
+#     return I/k2(f)
 
 # def exposing():
 #     with open('exposing.txt', 'r') as f:

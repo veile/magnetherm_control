@@ -120,7 +120,8 @@ def temp_options():
                     html.Div(style={'display': 'inline', 'float': 'left'},
                         children=[
                             html.Label("Filename (.txt)"),
-                            dcc.Input(id='filename-input', type='text', value=datetime.now().strftime('%Y-%m-%d')),
+                            dcc.Input(id='filename-input', type='text', value=datetime.now().strftime('%Y-%m-%d'),
+                                      debounce=True),
                         ]),
                     html.Div(style={'display': 'inline', 'float': 'right'},
                         children=[
@@ -209,6 +210,7 @@ def tabs():
             'borderColor': '#616161'
         },
         children=[
+            dcc.Store(id='configuration', storage_type='session'),
             dcc.Tabs(id='main_tabs', value='tab_1',
                      children=[
                          dcc.Tab(label="Tuning", value='tab_1'),
@@ -227,11 +229,11 @@ def tuning():
         {'label': '18 Turns', 'value': 18}
     ]
     cap=[
-        {'label': '6.2 nF', 'value': 6.2},
-        {'label': '15 nF', 'value': 15},
-        {'label': '26 nF', 'value': 26},
-        {'label': '88 nF', 'value': 88},
-        {'label': '200 nF', 'value': 200},
+        {'label': '6.2 nF', 'value': '6.2 nF'},
+        {'label': '15 nF', 'value': '15 nF'},
+        {'label': '26 nF', 'value': '26 nF'},
+        {'label': '88 nF', 'value': '88 nF'},
+        {'label': '200 nF', 'value': '200 nF'},
     ]
     return html.Div(
         style={
@@ -252,11 +254,11 @@ def tuning():
                 children=[
                     html.Label("Choose Coil Type"),
                     dcc.Dropdown(id='coil_type', options=coils,
-                                 value=18, persistence=True),
+                                 value=18, persistence=True, clearable=False),
                     html.Br(),
                     html.Label("Choose Capacitor"),
                     dcc.Dropdown(id='cap_type', options=cap,
-                                 value=6.2, persistence=True),
+                                 value='6.2 nF', persistence=True, clearable=False),
                 ]
             ),
             html.Div(
@@ -320,7 +322,7 @@ def exposure():
                     html.Label("Power Supply Current [A]"),
                     dcc.Input(
                         id="exp_current", type='number', placeholder='',
-                        style={'width': '200px'}, persistence=True, value=1
+                        style={'width': '200px'}, persistence=True, value=0, debounce=True
                     ),
                     html.Br(), html.Br(),
                 ]
@@ -340,7 +342,7 @@ def exposure():
                     html.Label("Exposure Field [mT]"),
                     dcc.Input(
                         id="exp_field", type='number',
-                        style={'width': '200px'}, persistence=True, value=-1
+                        style={'width': '200px'}, persistence=True, value=0, debounce=True
                     ),
                     html.Br(), html.Br(),
                 ]

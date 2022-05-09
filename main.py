@@ -25,10 +25,10 @@ import app.utils as utils
 import app.functions as func
 
 # Debugging mode
-# PowerSupply = dummy_PowerSupply
-# ToneGenerator = dummy_ToneGenerator
-# TC = dummy_TC
-# fiber = dummy_fiber
+PowerSupply = dummy_PowerSupply
+ToneGenerator = dummy_ToneGenerator
+TC = dummy_TC
+fiber = dummy_fiber
 # --------------
 
 global tone
@@ -197,25 +197,31 @@ def refresh_options(n_intervals):
 
 
 @app.callback(
-    Output('tab_content', 'children'),
+    [Output('tab_content', 'children'),
+     Output('tune_interval', 'disabled'),
+     Output('exp_interval', 'disabled')],
     Input('main_tabs', 'value'))
 def render_content(tab):
     if tab == 'tab_1':
-        return comp.tuning()
+        return comp.tuning(), False, True
     elif tab == 'tab_2':
-        return comp.exposure()
+        return comp.exposure(), True, False
 
 
 @app.callback(
     [Output('freq_low', 'value'),
-     Output('freq_high', 'value')],
+     Output('freq_high', 'value'),
+     Output('configuration', 'data')],
     [Input('coil_type', 'value'),
-     Input('cap_type', 'value')]
+     Input('cap_type', 'value')],
+    State('configuration', 'data')
 )
-def set_frequency_range(coil_type, cap_type):
-    f = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil_type) &
-                               (utils.matrix_sheet['Capacitance [nF]'] == cap_type)].iloc[0]['Frequency [kHz]']
-    return f - 5, f + 5
+def set_frequency_range(coil_type, cap_type, data):
+    f = utils.matrix_sheet.loc[(utils.matrix_sheet['CoilTurns'] == coil_type) &
+                               (utils.matrix_sheet['CapacitorName'] == cap_type)].iloc[0]['FreqWork']
+    data = {'CoilTurns': coil_type, 'CapacitorName': cap_type}
+
+    return f - 5, f + 5, data
 
 
 @app.callback(
@@ -243,19 +249,40 @@ def stop_exposure(n):
     exposing = False
     return 'STOP'
 
+
+@app.callback(
+    Output('filename-input', 'style'),
+    Input('filename-input', 'value')
+)
+def display_overwrite(filename):
+    if filename is None:
+        raise dash.exceptions.PreventUpdate
+
+    if os.path.exists('data/'+filename+'.txt'):
+        return {'color': 'red'}
+    else:
+        return {'color': 'green'}
+
+
 # -------------------------------------------------------------------------------------------------------------------
 @app.callback(
     [Output('confirm_tuning', 'displayed'),
      Output('confirm_tuning', 'message')],
     Input('tune_button', 'n_clicks'),
     [State('coil_type', 'value'),
-     State('cap_type', 'value')]
+     State('cap_type', 'value'),
+     State('filename-input', 'value')]
 )
-def confirm_tuning(clicks, coil, cap):
+def confirm_tuning(clicks, coil, cap, filename):
     if clicks == 0:
-        return False, ""
-    else:
-        return True, "Make sure that the coil has %s turns and the capacitor is at %s nF" % (str(coil), str(cap))
+        raise dash.exceptions.PreventUpdate
+
+    overwrite_msg = ''
+    filename = 'data/' + filename + '.txt'
+    if os.path.exists(filename):
+        overwrite_msg = 'FILE ALREADY EXISTS!\n'
+
+    return True, overwrite_msg+"Make sure that the coil has %s turns and the capacitor is at %s nF" % (str(coil), str(cap))
 
 
 @app.callback(
@@ -280,7 +307,7 @@ def update_tune_graph(n, filename):
     if filename is None:
         raise dash.exceptions.PreventUpdate
 
-    filename = 'data/' + filename + "_tune.txt"
+    filename = 'data/' + filename + ".txt"
 
     try:
         df = pd.read_csv(filename, sep='\t')
@@ -342,16 +369,17 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
 
     exposing = True
 
-    filename = 'data/' + filename + "_tune.txt"
+    filename = 'data/' + filename + '.txt'
+
     t_header = "\t".join(['T%i [degC]' % i for i in range(len(temp))])
     header = 'Frequency [Hz]\tCurrent [A]\tVoltage [V]\t' + t_header
     with open(filename, 'w') as file:
         file.write(header + "\n")
 
-    V = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil) &
-                               (utils.matrix_sheet['Capacitance [nF]'] == cap)].iloc[0]['Voltage [V]']
-    I = utils.matrix_sheet.loc[(utils.matrix_sheet['Coil Turns'] == coil) &
-                               (utils.matrix_sheet['Capacitance [nF]'] == cap)].iloc[0]['Current [A]']
+    V = utils.matrix_sheet.loc[(utils.matrix_sheet['CoilTurns'] == coil) &
+                               (utils.matrix_sheet['CapacitorName'] == cap)].iloc[0]['VoltsPSU']
+    I = utils.matrix_sheet.loc[(utils.matrix_sheet['CoilTurns'] == coil) &
+                               (utils.matrix_sheet['CapacitorName'] == cap)].iloc[0]['AmpsPSU']
 
     currents = []
 
@@ -419,20 +447,17 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
 # #Exposure
 @app.callback(
     Output('exp_field', 'value'),
-    Input('exp_current', 'n_submit'),
-    State('exp_current', 'value')
+    Input('exp_current', 'value'),
+    [State('exp_current', 'value'),
+     State('configuration', 'data')]
 )
-def current_to_field(n, current):
-    # if n is None:
-    #     raise dash.exceptions.PreventUpdate
+def current_to_field(n, current, config):
+    if n is None:
+        raise dash.exceptions.PreventUpdate
 
-    global fres
-
-    if 'fres' not in globals():
-        return '-1'
-
+    current = float(current)
     try:
-        field = utils.current_to_field(fres * 1e-3, float(current))
+        field = utils.current_to_field(current, **config)
     except TypeError as e:
         return str(e)
 
@@ -441,21 +466,17 @@ def current_to_field(n, current):
 
 @app.callback(
     Output('exp_current', 'value'),
-    Input('exp_field', 'n_submit'),
-    State('exp_field', 'value')
+    Input('exp_field', 'value'),
+    [State('exp_field', 'value'),
+     State('configuration', 'data')]
 )
-def field_to_current(n, field):
+def field_to_current(n, field, config):
     if n is None:
         raise dash.exceptions.PreventUpdate
 
-    global fres
-
-    if 'fres' not in globals():
-        return '-1'
-
     field = float(field)
     try:
-        power_current = utils.field_to_current(field, fres * 1e-3)
+        power_current = utils.field_to_current(field, **config)
     except TypeError as e:
         return str(e)
 
@@ -467,13 +488,19 @@ def field_to_current(n, field):
      Output('confirm_exposure', 'message')],
     Input('exp_button', 'n_clicks'),
     [State('exp_time', 'value'),
-     State('exp_field', 'value')]
+     State('exp_field', 'value'),
+     State('filename-input', 'value')]
 )
-def confirm_exposure(clicks, exp_time, field):
+def confirm_exposure(clicks, exp_time, field, filename):
     if clicks == 0:
         return False, ""
-    else:
-        return True, "Expose %s mT for %s seconds?" % (str(field), str(exp_time))
+
+    overwrite_msg = ''
+    filename = 'data/' + filename + '.txt'
+    if os.path.exists(filename):
+        overwrite_msg = 'FILE ALREADY EXISTS!\n'
+
+    return True, overwrite_msg+"Expose %s mT for %s seconds?" % (str(field), str(exp_time))
 
 
 @app.callback(
@@ -506,7 +533,7 @@ def update_exp_graph(n, filename):
     if temp is None:
         raise dash.exceptions.PreventUpdate
 
-    filename = 'data/' + filename + "_exp.txt"
+    filename = 'data/' + filename + ".txt"
 
     try:
         df = pd.read_csv(filename, sep='\t', comment='#')
@@ -563,7 +590,7 @@ def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
     except:
         return "Input valid number at current"
 
-    filename = 'data/' + filename + "_exp.txt"
+    filename = 'data/' + filename + '.txt'
 
     props = """#Resonance Frequency: %.3f kHz\n#Set Current: %.2f A\n""" % (fres, current)
 
