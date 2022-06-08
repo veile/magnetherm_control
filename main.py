@@ -8,8 +8,8 @@ from flask import send_from_directory
 from serial import SerialException
 
 import dash
-import dash_html_components as html
-import dash_core_components as dcc
+from dash import html, dcc
+
 from dash.dependencies import Output, Input, State
 from dash_extensions.snippets import send_file
 
