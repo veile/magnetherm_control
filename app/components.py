@@ -1,7 +1,6 @@
 import plotly.express as px
-import dash_core_components as dcc
+from dash import dcc, html
 import dash_daq as daq
-import dash_html_components as html
 # import dash_bootstrap_components as dbc
 
 from dash_dual_listbox import DualList
