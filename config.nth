@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MagneThermConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <MinWaterFlow>0.04</MinWaterFlow>
+  <MaxWaterFlow>2.5</MaxWaterFlow>
+  <MaxPowerTemperature>80</MaxPowerTemperature>
+  <MaxSensorTemperature>80</MaxSensorTemperature>
+  <PIDProportional>7</PIDProportional>
+  <PIDDerivative>0.1</PIDDerivative>
+  <PIDIntegral>0.3</PIDIntegral>
+  <PIDMaximumCurrent>0</PIDMaximumCurrent>
+  <PIDMinimumCurrent>0</PIDMinimumCurrent>
+  <PIDDebugLevel>0</PIDDebugLevel>
+  <CapacitorData>
+    <CapacitorDataClass>
+      <CoilType>1</CoilType>
+      <CapacitorType>1</CapacitorType>
+      <FreqWork>161</FreqWork>
+      <TuneBefore>2</TuneBefore>
+      <TuneAfter>2</TuneAfter>
+      <VoltsPSU>26</VoltsPSU>
+      <AmpsPSU>24.6</AmpsPSU>
+      <VppCoil>1260</VppCoil>
+      <CorrelationFactor>0.934959352</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>200 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>1</CoilType>
+      <CapacitorType>2</CapacitorType>
+      <FreqWork>242</FreqWork>
+      <TuneBefore>2</TuneBefore>
+      <TuneAfter>2</TuneAfter>
+      <VoltsPSU>29</VoltsPSU>
+      <AmpsPSU>21.8</AmpsPSU>
+      <VppCoil>2000</VppCoil>
+      <CorrelationFactor>0.9174312</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>88 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>1</CoilType>
+      <CapacitorType>3</CapacitorType>
+      <FreqWork>405</FreqWork>
+      <TuneBefore>5</TuneBefore>
+      <TuneAfter>5</TuneAfter>
+      <VoltsPSU>34</VoltsPSU>
+      <AmpsPSU>20.5</AmpsPSU>
+      <VppCoil>3000</VppCoil>
+      <CorrelationFactor>0.7804878</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>26 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>1</CoilType>
+      <CapacitorType>4</CapacitorType>
+      <FreqWork>572</FreqWork>
+      <TuneBefore>5</TuneBefore>
+      <TuneAfter>5</TuneAfter>
+      <VoltsPSU>35</VoltsPSU>
+      <AmpsPSU>17.3</AmpsPSU>
+      <VppCoil>3000</VppCoil>
+      <CorrelationFactor>0.809248567</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>15 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>1</CoilType>
+      <CapacitorType>5</CapacitorType>
+      <FreqWork>925</FreqWork>
+      <TuneBefore>6</TuneBefore>
+      <TuneAfter>6</TuneAfter>
+      <VoltsPSU>35</VoltsPSU>
+      <AmpsPSU>13.4</AmpsPSU>
+      <VppCoil>4000</VppCoil>
+      <CorrelationFactor>0.8955224</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>6.2 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>2</CoilType>
+      <CapacitorType>1</CapacitorType>
+      <FreqWork>105</FreqWork>
+      <TuneBefore>2</TuneBefore>
+      <TuneAfter>2</TuneAfter>
+      <VoltsPSU>30</VoltsPSU>
+      <AmpsPSU>17</AmpsPSU>
+      <VppCoil>1260</VppCoil>
+      <CorrelationFactor>1.47058821</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>200 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>2</CoilType>
+      <CapacitorType>2</CapacitorType>
+      <FreqWork>158</FreqWork>
+      <TuneBefore>2</TuneBefore>
+      <TuneAfter>2</TuneAfter>
+      <VoltsPSU>30</VoltsPSU>
+      <AmpsPSU>13.55</AmpsPSU>
+      <VppCoil>2000</VppCoil>
+      <CorrelationFactor>1.25461257</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>88 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>2</CoilType>
+      <CapacitorType>3</CapacitorType>
+      <FreqWork>265</FreqWork>
+      <TuneBefore>5</TuneBefore>
+      <TuneAfter>5</TuneAfter>
+      <VoltsPSU>39</VoltsPSU>
+      <AmpsPSU>14.1</AmpsPSU>
+      <VppCoil>3000</VppCoil>
+      <CorrelationFactor>1.20567381</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>26 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>2</CoilType>
+      <CapacitorType>4</CapacitorType>
+      <FreqWork>374</FreqWork>
+      <TuneBefore>5</TuneBefore>
+      <TuneAfter>5</TuneAfter>
+      <VoltsPSU>44</VoltsPSU>
+      <AmpsPSU>13.5</AmpsPSU>
+      <VppCoil>3000</VppCoil>
+      <CorrelationFactor>1.18518519</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>15 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>2</CoilType>
+      <CapacitorType>5</CapacitorType>
+      <FreqWork>603</FreqWork>
+      <TuneBefore>6</TuneBefore>
+      <TuneAfter>6</TuneAfter>
+      <VoltsPSU>47</VoltsPSU>
+      <AmpsPSU>12</AmpsPSU>
+      <VppCoil>4000</VppCoil>
+      <CorrelationFactor>1</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>6.2 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>3</CoilType>
+      <CapacitorType>1</CapacitorType>
+      <FreqWork>161</FreqWork>
+      <TuneBefore>2</TuneBefore>
+      <TuneAfter>2</TuneAfter>
+      <VoltsPSU>39</VoltsPSU>
+      <AmpsPSU>28</AmpsPSU>
+      <VppCoil>1260</VppCoil>
+      <CorrelationFactor>1.6525</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>200 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>3</CoilType>
+      <CapacitorType>2</CapacitorType>
+      <FreqWork>242</FreqWork>
+      <TuneBefore>2</TuneBefore>
+      <TuneAfter>2</TuneAfter>
+      <VoltsPSU>44</VoltsPSU>
+      <AmpsPSU>23.85</AmpsPSU>
+      <VppCoil>2000</VppCoil>
+      <CorrelationFactor>1.65366876</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>88 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>3</CoilType>
+      <CapacitorType>3</CapacitorType>
+      <FreqWork>406</FreqWork>
+      <TuneBefore>5</TuneBefore>
+      <TuneAfter>5</TuneAfter>
+      <VoltsPSU>44</VoltsPSU>
+      <AmpsPSU>20</AmpsPSU>
+      <VppCoil>3000</VppCoil>
+      <CorrelationFactor>1.5775</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>26 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>3</CoilType>
+      <CapacitorType>4</CapacitorType>
+      <FreqWork>574</FreqWork>
+      <TuneBefore>6</TuneBefore>
+      <TuneAfter>6</TuneAfter>
+      <VoltsPSU>49</VoltsPSU>
+      <AmpsPSU>19</AmpsPSU>
+      <VppCoil>3000</VppCoil>
+      <CorrelationFactor>1.52210522</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>15 nF</CapacitorName>
+    </CapacitorDataClass>
+    <CapacitorDataClass>
+      <CoilType>3</CoilType>
+      <CapacitorType>5</CapacitorType>
+      <FreqWork>928</FreqWork>
+      <TuneBefore>7</TuneBefore>
+      <TuneAfter>7</TuneAfter>
+      <VoltsPSU>42</VoltsPSU>
+      <AmpsPSU>13.5</AmpsPSU>
+      <VppCoil>5000</VppCoil>
+      <CorrelationFactor>1.362963</CorrelationFactor>
+      <HighLow>L</HighLow>
+      <CapacitorName>6.2 nF</CapacitorName>
+    </CapacitorDataClass>
+  </CapacitorData>
+  <CoilData>
+    <CoilDataClass>
+      <CoilType>1</CoilType>
+      <CoilName>9 T 44mm</CoilName>
+    </CoilDataClass>
+    <CoilDataClass>
+      <CoilType>2</CoilType>
+      <CoilName>17 T 44mm</CoilName>
+    </CoilDataClass>
+    <CoilDataClass>
+      <CoilType>3</CoilType>
+      <CoilName>18 T 26mm</CoilName>
+    </CoilDataClass>
+  </CoilData>
+  <magneThermDigitalFitted>false</magneThermDigitalFitted>
+  <PSUFitted>true</PSUFitted>
+  <magneThermDongleFitted>true</magneThermDongleFitted>
+  <SignalGeneratorFitted>true</SignalGeneratorFitted>
+  <ChillerFitted>false</ChillerFitted>
+  <TemperatureProbeCount>1</TemperatureProbeCount>
+  <MagneThermDebugLevel>0</MagneThermDebugLevel>
+  <PSUDebugLevel>14</PSUDebugLevel>
+  <SignalGeneratorDebugLevel>14</SignalGeneratorDebugLevel>
+  <ChillerDebugLevel>0</ChillerDebugLevel>
+  <ThermometerDebugLevel>1</ThermometerDebugLevel>
+  <MagneThermComPort />
+  <ChillerComPort />
+  <ThermometerComPort>COM7</ThermometerComPort>
+  <PSUComPort>COM39</PSUComPort>
+  <SignalGeneratorComPort>COM38</SignalGeneratorComPort>
+</MagneThermConfig>

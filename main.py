@@ -11,7 +11,6 @@ import dash
 from dash import html, dcc
 
 from dash.dependencies import Output, Input, State
-from dash_extensions.snippets import send_file
 
 import plotly.graph_objects as go
 import plotly.express as px
@@ -25,10 +24,10 @@ import app.utils as utils
 import app.functions as func
 
 # Debugging mode
-PowerSupply = dummy_PowerSupply
-ToneGenerator = dummy_ToneGenerator
-TC = dummy_TC
-fiber = dummy_fiber
+# PowerSupply = dummy_PowerSupply
+# ToneGenerator = dummy_ToneGenerator
+# TC = dummy_TC
+# fiber = dummy_fiber
 # --------------
 
 global tone
@@ -646,7 +645,7 @@ def download_file(n_clicks, data, rows):
     files = [data[r]['Filename'] for r in rows]
 
     if len(files) == 1:
-        return send_file(directory + files[0]), ''
+        return dcc.send_file(directory + files[0]), ''
     else:
         # create a ZipFile object
         zip_obj = ZipFile(directory + 'measurements.zip', 'w')
@@ -655,7 +654,7 @@ def download_file(n_clicks, data, rows):
             zip_obj.write(directory + f, arcname=f)
         # close the Zip File
         zip_obj.close()
-        return send_file(directory + "measurements.zip", mime_type='application/zip'), ''
+        return dcc.send_file(directory + "measurements.zip"), ''
 
 
 

@@ -5,8 +5,6 @@ import dash_daq as daq
 
 from dash_dual_listbox import DualList
 from dash_table import DataTable
-from dash_extensions import Download
-
 
 from app import colors
 from app.utils import get_files, get_devices
@@ -413,7 +411,7 @@ def files_list():
             ),
             html.Br(),
             html.Button("Download", id="download_button", n_clicks=0),
-            Download(id="download"),
+            dcc.Download(id="download"),
             dcc.Loading(id="dl_loading", children=html.Div(id="dl_loading_output"))
         ]
     )
