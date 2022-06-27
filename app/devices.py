@@ -28,7 +28,7 @@ class ToneGenerator():
         cmd = cmd + self.endchar
         self.ser.write(cmd.encode('utf-8'))
 
-        time.sleep(.05)
+        time.sleep(.07)
 
         reply = self.ser.read(self.ser.inWaiting()).decode('utf-8', errors='ignore')
         if reply == '':
@@ -94,7 +94,7 @@ class PowerSupply():
         cmd = cmd + self.endchar
         self.ser.write(cmd.encode('utf-8'))
 
-        time.sleep(.05)
+        time.sleep(.07)
 
         reply = self.ser.read(self.ser.inWaiting()).decode('utf-8', errors='ignore')
         if reply == '':
