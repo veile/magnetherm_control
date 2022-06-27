@@ -5,7 +5,6 @@ def measure(filename, start, power, tcs, state='??'):
     t = time.time()
 
     try:
-        test = this_variable_is_not_there
         V = power.get_V().strip('V')
         I = power.get_I().strip('A')
         temperatures = '\t'.join(list(map(str, tcs.get_T())))
