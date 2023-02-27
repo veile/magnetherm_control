@@ -12,7 +12,9 @@ from osensapy import osensapy
 
 
 if sys.platform.startswith('linux'):
-    from mcp9600 import MCP9600
+    import board
+    import digitalio
+    import adafruit_max31856
 
 class WrongDeviceError(Exception):
     """Base class for wrong device"""
@@ -175,44 +177,97 @@ class fiber():
     def __len__(self):
         return 1
 
+    def initiate(self):
+    # Compability between TC and fibre
+        pass
+    
     def get_T(self):
         return [self.transmitter.read_channel_temp('A')]
+        
+        
+    def reinitialize(self):
+        port = self.transmitter.modbus.serial.port
+        self.transmitter.close()
+        self.transmitter = osensapy.Transmitter(port, 247, baudrate=115200)
 
 
 class TC():
-    def __init__(self, addresses):
-        for i in range(10):
-            try:
-                self.mcp = [MCP9600(a) for a in addresses]
-            except:
-                print("Attempt %i out of 10" %i)
-                continue
+    """
+    Class that handles the SPI driven thermocouple amplifier from Adafruit (MAX 31856)
+    """
+    def __init__(self, CS_PINS=['D5'], tc_type='N'):
+        self.CS_PINS = CS_PINS
+        
+        spi = board.SPI()
+        
+        cs = [digitalio.DigitalInOut(getattr(board, pin)) for pin in self.CS_PINS]
+        for c in cs:
+            c.direction = digitalio.Direction.OUTPUT
+        
+        self.tcs = [adafruit_max31856.MAX31856(spi, c, thermocouple_type=getattr(adafruit_max31856.ThermocoupleType, tc_type)) for c in cs]
+        for tc in self.tcs:
+
+             tc.noise_rejection = 50
+
 
     def __len__(self):
-        return len(self.mcp)
+        return len(self.tcs)
 
+    def initiate(self):
+        [tc.initiate_one_shot_measurement() for tc in self.tcs]
+    
     def get_T(self):
-        T = [tc.get_hot_junction_temperature() for tc in self.mcp]
-        return T
+        # [tc.initiate_one_shot_measurement() for tc in self.tcs]
+        
+        # while self.tcs[-1].oneshot_pending:
+            # pass
+            
+        print(self.tcs[0].fault)
+        
+    
+        if self.tcs[0].oneshot_pending:
+            raise Exception('Temperature not initialised!')
+        return [tc.unpack_temperature() for tc in self.tcs]
+        
+    def set_type(self, tc_type='N'):
+        thermocouple_type = getattr(adafruit_max31856.ThermocoupleType, tc_type)
+        [tc._set_thermocouple_type(thermocouple_type) for tc in self.tcs]
 
-    def set_type(self, type):
-        if type not in ['K', 'J', 'T', 'N', 'S', 'E', 'B', 'R']:
-            raise Exception('Not supported thermocouple type')
+# class TC():
+    # def __init__(self, addresses):
+        # for i in range(10):
+            # try:
+                # self.mcp = [MCP9600(a) for a in addresses]
+            # except:
+                # print("Attempt %i out of 10" %i)
+                # continue
 
-        else:
-            for tc in self.mcp:
-                tc.set_thermocouple_type(type)
+    # def __len__(self):
+        # return len(self.mcp)
 
-    def set_adc(self, res):
-        if res not in [12, 14, 16, 18]:
-            raise Exception("ADC Resolution must be 12, 14, 16 or 18")
+    # def initiate():
+        # pass
 
-        else:
-            for tc in self.mcp:
-                tc._mcp9600.set('DEVICE_CONFIG', adc_resolution=res)
+    # def get_T(self):
+        # T = [tc.get_hot_junction_temperature() for tc in self.mcp]
+        # return T
 
+    # def set_type(self, type):
+        # if type not in ['K', 'J', 'T', 'N', 'S', 'E', 'B', 'R']:
+            # raise Exception('Not supported thermocouple type')
 
+        # else:
+            # for tc in self.mcp:
+                # tc.set_thermocouple_type(type)
 
+    # def set_adc(self, res):
+        # if res not in [12, 14, 16, 18]:
+            # raise Exception("ADC Resolution must be 12, 14, 16 or 18")
+
+        # else:
+            # for tc in self.mcp:
+                # tc._mcp9600.set('DEVICE_CONFIG', adc_resolution=res)
+                
 # ---------------------------DUMMY OBJECTS-----------------------------------------------#
 class dummy_ToneGenerator():
     endchar = "\r\n"

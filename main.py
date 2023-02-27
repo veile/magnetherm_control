@@ -163,7 +163,8 @@ def choose_temp_sensor(sensor):
         raise dash.exceptions.PreventUpdate
 
     if sensor == 'TC':
-        temp = TC([0x67, 0x60])
+        # temp = TC([0x60])
+        temp = TC(CS_PINS=['D5'])
         return comp.thermo_div()
     if sensor == 'OFT':
         temp = None
@@ -225,13 +226,12 @@ def set_frequency_range(coil_type, cap_type, data):
 
 @app.callback(
     Output('test_div', 'children'),
-    (Input('tc_type', 'value'),
-     Input('tc_rate', 'value'))
+    (Input('tc_type', 'value'))
 )
-def tc_configure(type, res):
-    temp.set_type(type)
-    temp.set_adc(res)
-    return "Thermocouple configured to type %s and resolution %i!" % (type, res)
+def tc_configure(thermo_type, res):
+    temp.set_type(thermo_type)
+    print(f'Set to type {thermo_type}')
+    return f'Thermcouple type set to {thermo_type}'
 
 
 @app.callback(
@@ -292,7 +292,7 @@ def confirm_tuning(clicks, coil, cap, filename):
 def start_tune_graphing(n, n_ints):
     if n is None:
         return 0
-    return n_ints + 10
+    return n_ints + 20
 
 
 @app.callback(
@@ -394,6 +394,7 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
             return 'Tuning stopped'
 
         tone.set_frequency(f)
+        temp.initiate()
         time.sleep(.5)
 
         readingI = power.get_I().strip('A')
@@ -419,6 +420,7 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
             return 'Tuning stopped'
 
         tone.set_frequency(f)
+        temp.initiate()
         time.sleep(.5)
 
         readingI = power.get_I().strip('A')
@@ -582,7 +584,8 @@ def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
 
     if temp is None:
         "Please select temperature sensor."
-
+    temp.initiate()
+    
     # Checks if current is numeric
     try:
         current = float(current)
@@ -610,7 +613,8 @@ def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
             return "Experiment stopped"
 
         func.measure(filename, start, power, temp, state=state)
-
+        temp.initiate()
+        
         if (time.time() - start) > rec_before-0.1 and state == 'BEFORE':
             state = 'EXPOSING'
             power.set(V=45, I=current)
@@ -623,6 +627,7 @@ def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
             # Sets output to 0V and 0A and output to off
             power.set_default()
 
+        
         time.sleep(dt - (time.time() % dt))
 
     exposing = False

@@ -135,7 +135,8 @@ def temp_options():
 def thermo_div():
     types = [{'label': 'Type K', 'value': 'K'},
              {'label': 'Type J', 'value': 'J'},
-             {'label': 'Type N', 'value': 'N'}]
+             {'label': 'Type N', 'value': 'N'},
+             {'label': 'Type R', 'value': 'R'}]
     res = [{'label': '300 ms', 'value': 18},
            {'label': '80 ms',  'value': 16},
            {'label': '20 ms',  'value': 14},
@@ -145,12 +146,6 @@ def thermo_div():
                 id='tc_type',
                 options=types,
                 value='N'
-            ),
-            html.Label("Sampling rate"),
-            dcc.Dropdown(
-                id='tc_rate',
-                options=res,
-                value=18
             )]
 
 
