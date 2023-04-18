@@ -8,7 +8,7 @@ from flask import send_from_directory
 from serial import SerialException
 
 import dash
-from dash import html, dcc
+from dash import html, dcc, ctx
 
 from dash.dependencies import Output, Input, State
 
@@ -24,10 +24,10 @@ import app.utils as utils
 import app.functions as func
 
 # Debugging mode
-# PowerSupply = dummy_PowerSupply
-# ToneGenerator = dummy_ToneGenerator
-# TC = dummy_TC
-# fiber = dummy_fiber
+PowerSupply = dummy_PowerSupply
+ToneGenerator = dummy_ToneGenerator
+TC = dummy_TC
+fiber = dummy_fiber
 # --------------
 
 global tone
@@ -196,16 +196,18 @@ def refresh_options(n_intervals):
     return options, options
 
 
-@app.callback(
-    [Output('tab_content', 'children'),
-     Output('tune_interval', 'disabled'),
-     Output('exp_interval', 'disabled')],
-    Input('main_tabs', 'value'))
-def render_content(tab):
-    if tab == 'tab_1':
-        return comp.tuning(), False, True
-    elif tab == 'tab_2':
-        return comp.exposure(), True, False
+# @app.callback(
+#     [Output('tab_content', 'children'),
+#      Output('tune_interval', 'disabled'),
+#      Output('exp_interval', 'disabled')],
+#     Input('main_tabs', 'value'))
+# def render_content(tab):
+#     if tab == 'tab_1':
+#         return comp.tuning(), False, True
+#     elif tab == 'tab_2':
+#         return comp.exposure(), True, False
+#     elif tab == 'tab_3':
+#         return comp.exp_onoff(), True, False
 
 
 @app.callback(
@@ -281,7 +283,7 @@ def confirm_tuning(clicks, coil, cap, filename):
     if os.path.exists(filename):
         overwrite_msg = 'FILE ALREADY EXISTS!\n'
 
-    return True, overwrite_msg+"Make sure that the coil has %s turns and the capacitor is at %s nF" % (str(coil), str(cap))
+    return True, overwrite_msg+"Make sure that the coil has %s turns and the capacitor is at %s" % (str(coil), str(cap))
 
 
 @app.callback(
@@ -320,7 +322,7 @@ def update_tune_graph(n, filename):
     # Splitting DataFrame rough/fine sweep
     idx = df[x] < df[x].shift()
     if idx.sum() != 0:
-        split = np.where(idx==True)[0][0]
+        split = np.where(idx == True)[0][0]
     else:
         split = df[x].size
 
@@ -445,18 +447,15 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
 
 # -------------------------------------------------------------------------------------------------------------------
 
-# #Exposure
+# #Exposure tabs
 @app.callback(
     Output('exp_field', 'value'),
     Input('exp_current', 'value'),
-    [State('exp_current', 'value'),
-     State('configuration', 'data')]
+    State('configuration', 'data')
 )
-def current_to_field(n, current, config):
-    if n is None:
-        raise dash.exceptions.PreventUpdate
-
+def current_to_field(current, config):
     current = float(current)
+
     try:
         field = utils.current_to_field(current, **config)
     except TypeError as e:
@@ -468,14 +467,11 @@ def current_to_field(n, current, config):
 @app.callback(
     Output('exp_current', 'value'),
     Input('exp_field', 'value'),
-    [State('exp_field', 'value'),
-     State('configuration', 'data')]
+    State('configuration', 'data')
 )
-def field_to_current(n, field, config):
-    if n is None:
-        raise dash.exceptions.PreventUpdate
-
+def field_to_current(field, config):
     field = float(field)
+
     try:
         power_current = utils.field_to_current(field, **config)
     except TypeError as e:
@@ -488,11 +484,11 @@ def field_to_current(n, field, config):
     [Output('confirm_exposure', 'displayed'),
      Output('confirm_exposure', 'message')],
     Input('exp_button', 'n_clicks'),
-    [State('exp_time', 'value'),
+    [State('exp_current', 'value'),
      State('exp_field', 'value'),
      State('filename-input', 'value')]
 )
-def confirm_exposure(clicks, exp_time, field, filename):
+def confirm_exposure(clicks, current, field, filename):
     if clicks == 0:
         return False, ""
 
@@ -501,24 +497,26 @@ def confirm_exposure(clicks, exp_time, field, filename):
     if os.path.exists(filename):
         overwrite_msg = 'FILE ALREADY EXISTS!\n'
 
-    return True, overwrite_msg+"Expose %s mT for %s seconds?" % (str(field), str(exp_time))
+    return True, overwrite_msg+"Expose the sample with %s A (%s mT)?" % (str(current), str(field))
 
 
 @app.callback(
     Output('exp_interval', 'max_intervals'),
     Input('confirm_exposure', 'submit_n_clicks'),
     [State('exp_interval', 'n_intervals'),
-     State('exp_time', 'value'),
+     State('on_time', 'value'),
+     State('off_time', 'value'),
      State('rec_before', 'value'),
-     State('rec_after', 'value')]
+     State('rec_after', 'value'),
+     State('no_steps', 'value')]
 )
-def start_exp_graphing(n, n_ints, exp_time, rec_before, rec_after):
+def start_exp_graphing(n, n_ints, on_time, off_time, rec_before, rec_after, N):
     if n is None:
         return 0
-    elif not all(isinstance(x, int) for x in [exp_time, rec_before, rec_after]):
+    elif not all(isinstance(x, int) for x in [on_time, off_time, rec_before, rec_after]):
         return n_ints
     else:
-        return n_ints + exp_time + rec_before + rec_after + 5  # 5 sec buffer
+        return n_ints + rec_before + N*(on_time + off_time) + rec_after + 5  # 5 sec buffer
 
 
 @app.callback(
@@ -557,14 +555,16 @@ def update_exp_graph(n, filename):
 @app.callback(
     Output('expose_div', 'children'),
     Input('exp_interval', 'max_intervals'),
-    [State('exp_time', 'value'),
+    [State('on_time', 'value'),
+     State('off_time', 'value'),
      State('rec_before', 'value'),
      State('rec_after', 'value'),
      State('exp_current', 'value'),
      State('filename-input', 'value'),
-     State('sample_rate', 'value')]
+     State('sample_rate', 'value'),
+     State('no_steps', 'value')]
 )
-def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
+def expose(max_ints, on_time, off_time, rec_before, rec_after, current, filename, dt, N):
     global power, tone, exposing, tuned
 
     if max_ints == 0:
@@ -576,7 +576,7 @@ def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
     if not tuned:
         return "Please tune the system first!"
 
-    if not all(isinstance(x, int) for x in [exp_time, rec_before, rec_after]):
+    if not all(isinstance(x, int) for x in [on_time, off_time, rec_before, rec_after, N]):
         return "Please enter valid values"
 
     if exposing:
@@ -605,29 +605,45 @@ def expose(max_ints, exp_time, rec_before, rec_after, current, filename, dt):
     exposing = True
     state = 'BEFORE'
 
+    n = 0 # iterator that stops when it reaches N
+
     # Initially sets the time to a number divisible by the sample rate
     time.sleep(dt - (time.time() % dt))
     start = time.time()
-    while (time.time() - start) < (exp_time+rec_before+rec_after):
+    while (time.time() - start) < (rec_before+N*(on_time+off_time)+rec_after):
+    # while n < N:
         if not exposing:
             return "Experiment stopped"
 
         func.measure(filename, start, power, temp, state=state)
         temp.initiate()
-        
+
         if (time.time() - start) > rec_before-0.1 and state == 'BEFORE':
             state = 'EXPOSING'
             power.set(V=45, I=current)
             power.set_output('ON')
 
-        if (time.time() - start) > (rec_before+exp_time)-0.1 and state == 'EXPOSING':  # 0.1 s to account for small drifts
+        if (time.time() - start) > (rec_before+(n+1)*on_time+n*off_time-0.1) and state == 'EXPOSING':  # 0.1 s to account for small drifts
+            n += 1
+
             # Changing state
             state = 'WAIT'
 
             # Sets output to 0V and 0A and output to off
             power.set_default()
 
-        
+        if (time.time() - start) > (rec_before+n*(on_time+off_time)-0.1) and state == 'WAIT':
+            state = 'EXPOSING'
+            power.set(V=45, I=current)
+            power.set_output('ON')
+
+        if (time.time() - start) > (rec_before+N*(on_time+off_time)-0.1) and state == 'EXPOSING':
+            # Changing state
+            state = 'WAIT'
+
+            # Sets output to 0V and 0A and output to off
+            power.set_default()
+
         time.sleep(dt - (time.time() % dt))
 
     exposing = False

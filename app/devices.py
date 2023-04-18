@@ -410,26 +410,50 @@ class dummy_fiber():
         return T
 
 class dummy_TC():
-    def __init__(self, addresses):
-        self.mcp = addresses
+        """
+        Class that handles the SPI driven thermocouple amplifier from Adafruit (MAX 31856)
+        """
+        def __init__(self, CS_PINS=['D5'], tc_type='N'):
+            self.tcs = CS_PINS
 
-    def __len__(self):
-        return len(self.mcp)
+        def __len__(self):
+            return len(self.tcs)
 
-    def get_T(self):
-        T = [random.randint(50, 100) for i in range(len(self))]
-        return T
+        def initiate(self):
+            pass
 
-    def set_type(self, type):
-        if type not in ['K', 'J', 'T', 'N', 'S', 'E', 'B', 'R']:
-            raise Exception('Not supported thermocouple type')
+        def get_T(self):
+            T = [random.randint(50, 100) for i in range(len(self))]
+            return T
 
-        else:
-            print("Set thermocouple to type %s" %type)
+        def set_type(self, tc_type='N'):
+            if type not in ['K', 'J', 'T', 'N', 'S', 'E', 'B', 'R']:
+                raise Exception('Not supported thermocouple type')
 
-    def set_adc(self, res):
-        if res not in [12, 14, 16, 18]:
-            raise Exception("ADC Resolution must be 12, 14, 16 or 18")
+            else:
+                print("Set thermocouple to type %s" %type)
 
-        else:
-            print("Set res to %i" %res)
+# class dummy_TC():
+#     def __init__(self, addresses):
+#         self.mcp = addresses
+#
+#     def __len__(self):
+#         return len(self.mcp)
+#
+#     def get_T(self):
+#         T = [random.randint(50, 100) for i in range(len(self))]
+#         return T
+#
+#     def set_type(self, type):
+#         if type not in ['K', 'J', 'T', 'N', 'S', 'E', 'B', 'R']:
+#             raise Exception('Not supported thermocouple type')
+#
+#         else:
+#             print("Set thermocouple to type %s" %type)
+#
+#     def set_adc(self, res):
+#         if res not in [12, 14, 16, 18]:
+#             raise Exception("ADC Resolution must be 12, 14, 16 or 18")
+#
+#         else:
+#             print("Set res to %i" %res)
