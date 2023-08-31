@@ -442,7 +442,7 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
     tone.set_frequency(fres)
     tuned = True
 
-    return "Resonance frequency is %.1f kHz" % (fres * 1e-3)
+    return "Resonance frequency is %.1f Hz" % (fres * 1e-3)
 
 
 # -------------------------------------------------------------------------------------------------------------------
@@ -594,7 +594,7 @@ def expose(max_ints, on_time, off_time, rec_before, rec_after, current, filename
 
     filename = 'data/' + filename + '.txt'
 
-    props = """#Resonance Frequency: %.3f kHz\n#Set Current: %.2f A\n""" % (fres, current)
+    props = """#Resonance Frequency: %.3f Hz\n#Set Current: %.2f A\n""" % (fres, current)
 
     t_header = "\t".join(['T%i [degC]' % i for i in range(len(temp))])
     header = 'Time [s]\tCurrent [A]\tVoltage [V]\t' + t_header + "\tState"
@@ -610,7 +610,7 @@ def expose(max_ints, on_time, off_time, rec_before, rec_after, current, filename
     # Initially sets the time to a number divisible by the sample rate
     time.sleep(dt - (time.time() % dt))
     start = time.time()
-    while (time.time() - start) < (rec_before+N*(on_time+off_time)+rec_after):
+    while (time.time() - start) < (rec_before+N*(on_time+off_time)+rec_after+0.1):
     # while n < N:
         if not exposing:
             return "Experiment stopped"
@@ -632,7 +632,8 @@ def expose(max_ints, on_time, off_time, rec_before, rec_after, current, filename
             # Sets output to 0V and 0A and output to off
             power.set_default()
 
-        if (time.time() - start) > (rec_before+n*(on_time+off_time)-0.1) and state == 'WAIT':
+        if (rec_before+N*(on_time+off_time)-0.1) > (time.time() - start) >\
+                (rec_before + n * (on_time + off_time) - 0.1) and state == 'WAIT':
             state = 'EXPOSING'
             power.set(V=45, I=current)
             power.set_output('ON')
