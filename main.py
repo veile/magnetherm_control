@@ -24,10 +24,10 @@ import app.utils as utils
 import app.functions as func
 
 # Debugging mode
-PowerSupply = dummy_PowerSupply
-ToneGenerator = dummy_ToneGenerator
-TC = dummy_TC
-fiber = dummy_fiber
+# PowerSupply = dummy_PowerSupply
+# ToneGenerator = dummy_ToneGenerator
+# TC = dummy_TC
+# fiber = dummy_fiber
 # --------------
 
 global tone
@@ -35,8 +35,13 @@ global power
 global fres
 global temp
 
-exposing = False
-tuned = False
+# Storing these global variables in a .txt file instead
+# exposing = False
+# tuned = False
+with open('state.txt', 'w') as f:
+    f.write('exposing: False\ntuned: False')
+
+
 temp = None
 
 
@@ -195,21 +200,6 @@ def refresh_options(n_intervals):
     options = [{'label': a, 'value': a} for a in options_list]
     return options, options
 
-
-# @app.callback(
-#     [Output('tab_content', 'children'),
-#      Output('tune_interval', 'disabled'),
-#      Output('exp_interval', 'disabled')],
-#     Input('main_tabs', 'value'))
-# def render_content(tab):
-#     if tab == 'tab_1':
-#         return comp.tuning(), False, True
-#     elif tab == 'tab_2':
-#         return comp.exposure(), True, False
-#     elif tab == 'tab_3':
-#         return comp.exp_onoff(), True, False
-
-
 @app.callback(
     [Output('freq_low', 'value'),
      Output('freq_high', 'value'),
@@ -245,9 +235,9 @@ def stop_exposure(n):
         raise dash.exceptions.PreventUpdate
 
 
-    global exposing, power
+    global power
     power.set_default()
-    exposing = False
+    utils.write_state('exposing', False)
     return 'STOP'
 
 
@@ -350,7 +340,7 @@ def update_tune_graph(n, filename):
      State('filename-input', 'value')]
 )
 def tune(max_ints, flow, fhigh, coil, cap, filename):
-    global tone, power, exposing, tuned, fres
+    global tone, power, fres
     if max_ints == 0:
         return "Click tune to tune system"
     # if n is None:
@@ -359,6 +349,7 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
     if 'tone' not in globals() or 'power' not in globals():
         return "Please connect to devices."
 
+    exposing = utils.read_states()[0]
     if exposing:
         return "Experiment is running!"
 
@@ -368,7 +359,7 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
     if temp is None:
         return "Please choose temperature sensor"
 
-    exposing = True
+    utils.write_state('exposing', True)
 
     filename = 'data/' + filename + '.txt'
 
@@ -392,6 +383,7 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
     power.set(V / 3, I)
     power.set_output('ON')
     for f in freqs:
+        exposing = utils.read_states()[0]
         if not exposing:
             return 'Tuning stopped'
 
@@ -418,6 +410,7 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
     currents = []
     freqs = np.linspace(fmax - 1e3, fmax + 1e3, 5)
     for f in freqs:
+        exposing = utils.read_states()[0]
         if not exposing:
             return 'Tuning stopped'
 
@@ -437,10 +430,10 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
     fres = freqs[np.argmax(currents)]
 
     power.set_default()
-    exposing = False
+    utils.write_state('exposing', False)
 
     tone.set_frequency(fres)
-    tuned = True
+    utils.write_state('tuned', True)
 
     return "Resonance frequency is %.1f kHz" % (fres * 1e-3)
 
@@ -479,18 +472,37 @@ def field_to_current(field, config):
 
     return "%.2f" % power_current
 
-
 @app.callback(
-    [Output('confirm_exposure', 'displayed'),
-     Output('confirm_exposure', 'message')],
+    [Output('confirm_exposure_exp', 'displayed'),
+     Output('confirm_exposure_exp', 'message')],
     Input('exp_button', 'n_clicks'),
     [State('exp_current', 'value'),
      State('exp_field', 'value'),
      State('filename-input', 'value')]
 )
-def confirm_exposure(clicks, current, field, filename):
+def confirm_exposure_exp(clicks, current, field, filename):
     if clicks == 0:
-        return False, ""
+        raise dash.exceptions.PreventUpdate
+
+    overwrite_msg = ''
+    filename = 'data/' + filename + '.txt'
+    if os.path.exists(filename):
+        overwrite_msg = 'FILE ALREADY EXISTS!\n'
+
+    return True, overwrite_msg+"Expose the sample with %s A (%s mT)?" % (str(current), str(field))
+
+
+@app.callback(
+    [Output('confirm_exposure_temp', 'displayed'),
+     Output('confirm_exposure_temp', 'message')],
+    Input('temp_button', 'n_clicks'),
+    [State('exp_current', 'value'),
+     State('exp_field', 'value'),
+     State('filename-input', 'value')]
+)
+def confirm_exposure_temp(clicks, current, field, filename):
+    if clicks == 0:
+        raise dash.exceptions.PreventUpdate
 
     overwrite_msg = ''
     filename = 'data/' + filename + '.txt'
@@ -502,21 +514,20 @@ def confirm_exposure(clicks, current, field, filename):
 
 @app.callback(
     Output('exp_interval', 'max_intervals'),
-    Input('confirm_exposure', 'submit_n_clicks'),
+    [Input('confirm_exposure_temp', 'submit_n_clicks'),
+     Input('confirm_exposure_exp', 'submit_n_clicks')],
     [State('exp_interval', 'n_intervals'),
-     State('on_time', 'value'),
-     State('off_time', 'value'),
      State('rec_before', 'value'),
      State('rec_after', 'value'),
      State('no_steps', 'value')]
 )
-def start_exp_graphing(n, n_ints, on_time, off_time, rec_before, rec_after, N):
-    if n is None:
+def start_exp_graphing(click_temp, click_exp, n_ints, rec_before, rec_after, N):
+    if (click_temp or click_exp) is None:
         return 0
-    elif not all(isinstance(x, int) for x in [on_time, off_time, rec_before, rec_after]):
+    elif not all(isinstance(x, int) for x in [N, rec_before, rec_after]):
         return n_ints
     else:
-        return n_ints + rec_before + N*(on_time + off_time) + rec_after + 5  # 5 sec buffer
+        return n_ints + rec_before + N*900 + rec_after + 5  # 5 sec buffer
 
 
 @app.callback(
@@ -553,8 +564,10 @@ def update_exp_graph(n, filename):
 
 
 @app.callback(
-    Output('expose_div', 'children'),
-    Input('exp_interval', 'max_intervals'),
+    [Output('expose_div', 'children'),
+     Output('temperature_exp_div', 'children')],
+    [Input('confirm_exposure_exp', 'submit_n_clicks'),
+     Input('confirm_exposure_temp', 'submit_n_clicks')],
     [State('on_time', 'value'),
      State('off_time', 'value'),
      State('rec_before', 'value'),
@@ -562,28 +575,39 @@ def update_exp_graph(n, filename):
      State('exp_current', 'value'),
      State('filename-input', 'value'),
      State('sample_rate', 'value'),
-     State('no_steps', 'value')]
+     State('no_steps', 'value'),
+     State('set_temperature', 'value'),
+     State('temperature_range', 'value')]
 )
-def expose(max_ints, on_time, off_time, rec_before, rec_after, current, filename, dt, N):
-    global power, tone, exposing, tuned
+def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, current, filename, dt, N, Tset, Trange):
+    global power, tone
 
-    if max_ints == 0:
-        return "Click to start exposure"
+    id = ctx.triggered_id if not None else 'No clicks yet'
+    if id is None:
+        return "Click to start exposure", "Click to start exposure"
+
+    def return_select(msg, id):
+        if id == 'confirm_exposure_exp':
+            return msg, "Click to start exposure"
+        elif id == 'confirm_exposure_temp':
+            return "Click to start exposure", msg
 
     if 'tone' not in globals() or 'power' not in globals():
-        return "Please connect to devices."
+        return return_select("Please connect to devices.", id)
 
+    tuned = utils.read_states()[1]
     if not tuned:
-        return "Please tune the system first!"
+        return return_select("Please tune the system first!", id)
 
     if not all(isinstance(x, int) for x in [on_time, off_time, rec_before, rec_after, N]):
-        return "Please enter valid values"
+        return return_select("Please enter valid values", id)
 
+    exposing = utils.read_states()[0]
     if exposing:
-        return "Experiment is running!"
+        return return_select("Experiment is running!", id)
 
     if temp is None:
-        "Please select temperature sensor."
+        return_select("Please select temperature sensor.", id)
     temp.initiate()
     
     # Checks if current is numeric
@@ -602,52 +626,16 @@ def expose(max_ints, on_time, off_time, rec_before, rec_after, current, filename
         file.write(props + header + "\n")
 
     tone.set_output('ON')
-    exposing = True
-    state = 'BEFORE'
+    utils.write_state('exposing', True)
 
-    n = 0 # iterator that stops when it reaches N
+    if id == 'confirm_exposure_exp':
+        exitmsg = func.time_exp(power, temp, current, filename, rec_before, N, on_time, off_time, rec_after, dt)
 
-    # Initially sets the time to a number divisible by the sample rate
-    time.sleep(dt - (time.time() % dt))
-    start = time.time()
-    while (time.time() - start) < (rec_before+N*(on_time+off_time)+rec_after):
-    # while n < N:
-        if not exposing:
-            return "Experiment stopped"
+    elif id == 'confirm_exposure_temp':
+        exitmsg = func.temp_exp(power, temp, current, filename, rec_before, N, Tset, Trange, rec_after, dt)
 
-        func.measure(filename, start, power, temp, state=state)
-        temp.initiate()
-
-        if (time.time() - start) > rec_before-0.1 and state == 'BEFORE':
-            state = 'EXPOSING'
-            power.set(V=45, I=current)
-            power.set_output('ON')
-
-        if (time.time() - start) > (rec_before+(n+1)*on_time+n*off_time-0.1) and state == 'EXPOSING':  # 0.1 s to account for small drifts
-            n += 1
-
-            # Changing state
-            state = 'WAIT'
-
-            # Sets output to 0V and 0A and output to off
-            power.set_default()
-
-        if (time.time() - start) > (rec_before+n*(on_time+off_time)-0.1) and state == 'WAIT':
-            state = 'EXPOSING'
-            power.set(V=45, I=current)
-            power.set_output('ON')
-
-        if (time.time() - start) > (rec_before+N*(on_time+off_time)-0.1) and state == 'EXPOSING':
-            # Changing state
-            state = 'WAIT'
-
-            # Sets output to 0V and 0A and output to off
-            power.set_default()
-
-        time.sleep(dt - (time.time() % dt))
-
-    exposing = False
-    return "Exposure done"
+    utils.write_state('exposing', False)
+    return return_select(exitmsg, id)
 
 
 # Callbacks for data page
