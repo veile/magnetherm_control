@@ -394,19 +394,19 @@ def temperature_exp():
                 children=[
                     html.Label("Power Supply Current [A]"),
                     dcc.Input(
-                        id="exp_current", type='number', placeholder='',
+                        id="temp_current", type='number', placeholder='',
                         style={'width': '100%'}, persistence=True, value=0, debounce=True
                     ),
                     html.Br(), html.Br(),
                     html.Label("Exposure Field [mT]"),
                     dcc.Input(
-                        id="exp_field", type='number',
+                        id="temp_field", type='number',
                         style={'width': '100%'}, persistence=True, value=0, debounce=True
                     ),
                     html.Br(), html.Br(),
                     html.Label("dt [s]"),
                     dcc.Input(
-                        id="sample_rate", type='number',
+                        id="temp_sample_rate", type='number',
                         style={'width': '100%'}, persistence=True, value=0, debounce=True
                     ),
                     html.Br(), html.Br(),
@@ -420,19 +420,19 @@ def temperature_exp():
                 children=[
                     html.Label("Record Before [s]"),
                     dcc.Input(
-                        id="rec_before", type='number',
+                        id="temp_rec_before", type='number',
                         style={'width': '100%'}, persistence=True, value=30
                     ),
                     html.Br(), html.Br(),
                     html.Label("Record After [s]"),
                     dcc.Input(
-                        id="rec_after", type='number', placeholder='',
+                        id="temp_rec_after", type='number', placeholder='',
                         style={'width': '100%'}, persistence=True, value=60
                     ),
                     html.Br(), html.Br(),
                     html.Label('Number of Steps'),
                     dcc.Input(
-                        id="no_steps", type='number',
+                        id="temp_no_steps", type='number',
                         style={'width': '100%'}, persistence=True, value=180
                     ),
                     html.Br(), html.Br()
@@ -461,7 +461,7 @@ def temperature_exp():
                     # dbc.Progress(id="progress_expose", value=0, striped=True, animated=True),
                     html.Br(),
                     dcc.Loading(
-                        id="exposing",
+                        id="temp_exposing",
                         children=[html.Div(id='temperature_exp_div')],
                         type="circle"),
                 ]

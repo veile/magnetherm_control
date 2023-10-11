@@ -442,35 +442,42 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
 
 # #Exposure tabs
 @app.callback(
-    Output('exp_field', 'value'),
-    Input('exp_current', 'value'),
+    [Output('exp_field', 'value'),
+     Output('temp_field', 'value')],
+    [Input('exp_current', 'value'),
+     Input('temp_current', 'value')],
     State('configuration', 'data')
 )
-def current_to_field(current, config):
-    current = float(current)
+def current_to_field(exp_current, temp_current, config):
+
+    exp_current, temp_current = float(exp_current), float(temp_current)
 
     try:
-        field = utils.current_to_field(current, **config)
+        exp_field = utils.current_to_field(exp_current, **config)
+        temp_field = utils.current_to_field(temp_current, **config)
     except TypeError as e:
-        return str(e)
+        return str(e), str(e)
 
-    return "%.2f" % field
+    return "%.2f" % exp_field, "%.2f" % temp_field
 
 
 @app.callback(
-    Output('exp_current', 'value'),
-    Input('exp_field', 'value'),
+    [Output('exp_current', 'value'),
+     Output('temp_current', 'value')],
+    [Input('exp_field', 'value'),
+     Input('temp_field', 'value')],
     State('configuration', 'data')
 )
-def field_to_current(field, config):
-    field = float(field)
+def field_to_current(exp_field, temp_field, config):
+    exp_field, temp_field = float(exp_field), float(temp_field)
 
     try:
-        power_current = utils.field_to_current(field, **config)
+        exp_current = utils.field_to_current(exp_field, **config)
+        field_current = utils.field_to_current(temp_field, **config)
     except TypeError as e:
-        return str(e)
+        return str(e), str(e)
 
-    return "%.2f" % power_current
+    return "%.2f" % exp_current, "%.2f" % field_current
 
 @app.callback(
     [Output('confirm_exposure_exp', 'displayed'),
@@ -496,8 +503,8 @@ def confirm_exposure_exp(clicks, current, field, filename):
     [Output('confirm_exposure_temp', 'displayed'),
      Output('confirm_exposure_temp', 'message')],
     Input('temp_button', 'n_clicks'),
-    [State('exp_current', 'value'),
-     State('exp_field', 'value'),
+    [State('temp_current', 'value'),
+     State('temp_field', 'value'),
      State('filename-input', 'value')]
 )
 def confirm_exposure_temp(clicks, current, field, filename):
@@ -519,16 +526,34 @@ def confirm_exposure_temp(clicks, current, field, filename):
     [State('exp_interval', 'n_intervals'),
      State('rec_before', 'value'),
      State('rec_after', 'value'),
-     State('no_steps', 'value')]
+     State('no_steps', 'value'),
+     State('on_time', 'value'),
+     State('off_time', 'value'),
+     State('temp_rec_before', 'value'),
+     State('temp_rec_after', 'value'),
+     State('temp_no_steps', 'value')]
 )
-def start_exp_graphing(click_temp, click_exp, n_ints, rec_before, rec_after, N):
-    if (click_temp or click_exp) is None:
-        return 0
-    elif not all(isinstance(x, int) for x in [N, rec_before, rec_after]):
-        return n_ints
-    else:
-        return n_ints + rec_before + N*900 + rec_after + 5  # 5 sec buffer
+def start_exp_graphing(click_temp, click_exp, n_ints, rec_before, rec_after, N, on_time, off_time, temp_before,
+                       temp_after, temp_N):
+    if ctx.triggered_id is None:
+        dash.exceptions.PreventUpdate
 
+    id = ctx.triggered_id
+
+    if id == 'confirm_exposure_exp':
+        if not all(isinstance(x, int) for x in [N, rec_before, rec_after, on_time, off_time]):
+            return 0
+        else:
+            return n_ints + rec_before + N * (on_time+off_time) + rec_after + 5  # 5 sec buffer
+
+    elif id == 'confirm_exposure_temp':
+        if not all(isinstance(x, int) for x in [N, temp_before, temp_after, temp_N]):
+            return 0
+        else:
+            return n_ints + temp_before + temp_N* 900 + temp_after + 5  # 5 sec buffer
+
+    else:
+        return 0
 
 @app.callback(
     Output('exp_graph', 'figure'),
@@ -576,13 +601,20 @@ def update_exp_graph(n, filename):
      State('filename-input', 'value'),
      State('sample_rate', 'value'),
      State('no_steps', 'value'),
+     State('temp_current', 'value'),
+     State('temp_sample_rate', 'value'),
      State('set_temperature', 'value'),
-     State('temperature_range', 'value')]
+     State('temperature_range', 'value'),
+     State('temp_rec_before', 'value'),
+     State('temp_rec_after', 'value'),
+     State('temp_no_steps', 'value')],
 )
-def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, current, filename, dt, N, Tset, Trange):
+def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, current, filename, dt, N,
+           temp_current, temp_dt, Tset, Trange, temp_before, temp_after, temp_N):
+
     global power, tone
 
-    id = ctx.triggered_id if not None else 'No clicks yet'
+    id = ctx.triggered_id if not None else 'No clicks'
     if id is None:
         return "Click to start exposure", "Click to start exposure"
 
@@ -599,8 +631,8 @@ def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, curr
     if not tuned:
         return return_select("Please tune the system first!", id)
 
-    if not all(isinstance(x, int) for x in [on_time, off_time, rec_before, rec_after, N]):
-        return return_select("Please enter valid values", id)
+    # if not all(isinstance(x, int) for x in [on_time, off_time, rec_before, rec_after, N]):
+    #     return return_select("Please enter valid values", id)
 
     exposing = utils.read_states()[0]
     if exposing:
@@ -613,6 +645,7 @@ def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, curr
     # Checks if current is numeric
     try:
         current = float(current)
+        temp_current = float(temp_current)
     except:
         return "Input valid number at current"
 
@@ -632,7 +665,8 @@ def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, curr
         exitmsg = func.time_exp(power, temp, current, filename, rec_before, N, on_time, off_time, rec_after, dt)
 
     elif id == 'confirm_exposure_temp':
-        exitmsg = func.temp_exp(power, temp, current, filename, rec_before, N, Tset, Trange, rec_after, dt)
+        exitmsg = func.temp_exp(power, temp, temp_current, filename, temp_before, temp_N,
+                                Tset, Trange, temp_after, temp_dt)
 
     utils.write_state('exposing', False)
     return return_select(exitmsg, id)
