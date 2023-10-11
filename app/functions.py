@@ -115,9 +115,6 @@ def temp_exp(power, temp, current, filename, rec_before, N, Tset, Trange, rec_af
             power.set(V=45, I=current)
             power.set_output('ON')
 
-            # Sets output to 0V and 0A and output to off
-            power.set_default()
-
         time.sleep(dt - (time.time() % dt))
 
     time.sleep(dt - (time.time() % dt))

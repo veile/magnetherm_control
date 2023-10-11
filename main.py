@@ -236,6 +236,7 @@ def stop_exposure(n):
 
 
     global power
+    #Maybe I need to do this in the experiments such that it does not have 2 serial connections and fail.
     power.set_default()
     utils.write_state('exposing', False)
     return 'STOP'
