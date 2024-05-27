@@ -8,13 +8,13 @@ import serial
 import time
 import random
 import sys
-from osensapy import osensapy
 
 
 if sys.platform.startswith('linux'):
     import board
     import digitalio
     import adafruit_max31856
+    from osensapy import osensapy
 
 class WrongDeviceError(Exception):
     """Base class for wrong device"""
@@ -361,6 +361,11 @@ class dummy_PowerSupply():
         return self.comm('I1 ' + str(I))
 
     def set(self, V, I):
+        if I == 0:
+            print('PSU OFF')
+        else:
+            print('PSU ON')
+
         self.set_V(V)
         self.set_I(I)
 

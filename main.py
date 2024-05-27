@@ -436,7 +436,7 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
     tone.set_frequency(fres)
     utils.write_state('tuned', True)
 
-    return "Resonance frequency is %.1f kHz" % (fres * 1e-3)
+    return "Resonance frequency is %.1f Hz" % (fres * 1e-3)
 
 
 # -------------------------------------------------------------------------------------------------------------------
@@ -652,7 +652,7 @@ def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, curr
 
     filename = 'data/' + filename + '.txt'
 
-    props = """#Resonance Frequency: %.3f kHz\n#Set Current: %.2f A\n""" % (fres, current)
+    props = """#Resonance Frequency: %.3f Hz\n#Set Current: %.2f A\n""" % (fres, current)
 
     t_header = "\t".join(['T%i [degC]' % i for i in range(len(temp))])
     header = 'Time [s]\tCurrent [A]\tVoltage [V]\t' + t_header + "\tState"
@@ -661,6 +661,7 @@ def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, curr
 
     tone.set_output('ON')
     utils.write_state('exposing', True)
+
 
     if id == 'confirm_exposure_exp':
         exitmsg = func.time_exp(power, temp, current, filename, rec_before, N, on_time, off_time, rec_after, dt)
