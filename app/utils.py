@@ -78,33 +78,6 @@ def get_files(dir="./data/"):
             for f in files]
 
 
-# def current_state():
-#     file = "state.txt"
-#     with open(file, 'r') as f:
-#         state = f.read()
-#
-#     return "%s"%state
-
-# def change_state(newstate, which):
-#     file = "state.txt"
-#     which = which.lower()
-#     state = current_state().split('\n\n')
-#
-#     with open(file, 'w') as f:
-#         if which == 'current':
-#             state[0] = "**Current State**: "+newstate
-#         elif which == 'freq':
-#             state[1] = "**Frequency**: " + newstate
-#
-#         f.write('\n\n'.join(state))
-
-
-# def get_frequency():
-#     state = current_state().split('\n\n')
-#     frequency = state[1].split()[1]
-#     return float(frequency)
-
-
 def current_to_field(psu_amp, CapacitorName, CoilTurns):
     k = matrix_sheet.loc[(matrix_sheet['CoilTurns'] == CoilTurns) &
                          (matrix_sheet['CapacitorName'] == CapacitorName)]['CorrelationFactor']
@@ -116,25 +89,25 @@ def field_to_current(field, CapacitorName, CoilTurns):
                          (matrix_sheet['CapacitorName'] == CapacitorName)]['CorrelationFactor']
     return field/k
 
-# def coil_current(f, power_current):
-#     return k2(f)*power_current
-#
-#
-# def current_to_field(f, power_current, r=18e-3, L=53e-3, N=18):
-#     I = coil_current(f, power_current)
-#     return k1*I
-#
-# def field_to_current(field, f):
-#     mu0 = 4*np.pi*1e-7
-#     I = field/k1
-#
-#     return I/k2(f)
 
-# def exposing():
-#     with open('exposing.txt', 'r') as f:
-#         status = f.read()
-#     return status == 'True'
-#
-# def set_exposure(state):
-#     with open('exposing.txt', 'w') as f:
-#         f.write(str(bool(state)))
+def read_states():
+    with open('state.txt', 'r') as f:
+        lines = f.read().splitlines()
+
+    return [line[line.find(' ') + 1:] == 'True' for line in lines]
+
+def write_state(select, new_state):
+    select = select.upper()
+    select_dict = {'EXPOSING': 0, 'TUNED': 1}
+
+    with open('state.txt', 'r') as f:
+        lines = f.read().splitlines()
+
+        line = lines[select_dict[select]]
+        current_state = line[line.find(' ') + 1:]
+
+        line = line.replace(current_state, str(new_state))
+        lines[select_dict[select]] = line
+
+    with open('state.txt', 'w') as f:
+        f.write(lines[0]+'\n'+lines[1])

@@ -1,5 +1,5 @@
 import time
-
+import app.utils as utils
 
 def measure(filename, start, power, tcs, state='??'):
     t = time.time()
@@ -26,3 +26,109 @@ def measure(filename, start, power, tcs, state='??'):
 
     with open(filename, 'a') as file:
         file.write(output + "\n")
+
+
+def time_exp(power, temp, current, filename, rec_before, N, on_time, off_time, rec_after, dt):
+    state = 'BEFORE'
+    n = 0  # iterator that stops when it reaches N
+
+    # Initially sets the time to a number divisible by the sample rate
+    time.sleep(dt - (time.time() % dt))
+    start = time.time()
+    while (time.time() - start) < (rec_before + N * (on_time + off_time) + rec_after):
+        exposing = utils.read_states()[0]
+        if not exposing:
+            return "Experiment stopped"
+
+        measure(filename, start, power, temp, state=state)
+        temp.initiate()
+
+        if (time.time() - start) > rec_before - 0.1 and state == 'BEFORE':
+            state = 'EXPOSING'
+            power.set(V=45, I=current)
+            power.set_output('ON')
+
+        if (time.time() - start) > (rec_before + (
+                n + 1) * on_time + n * off_time - 0.1) and state == 'EXPOSING':  # 0.1 s to account for small drifts
+            n += 1
+
+            # Changing state
+            state = 'WAIT'
+
+            # Sets output to 0V and 0A and output to off
+            power.set_default()
+        if (rec_before+N*(on_time+off_time)-0.1) > (time.time() - start) >\
+           (rec_before + n * (on_time + off_time) - 0.1) and state == 'WAIT':
+
+#        if (time.time() - start) > (rec_before + n * (on_time + off_time) - 0.1) and state == 'WAIT':
+            state = 'EXPOSING'
+            power.set(V=45, I=current)
+            power.set_output('ON')
+
+        if (time.time() - start) > (rec_before + N * (on_time + off_time) - 0.1) and state == 'EXPOSING':
+            # Changing state
+            state = 'WAIT'
+
+            # Sets output to 0V and 0A and output to off
+            power.set_default()
+
+        time.sleep(dt - (time.time() % dt))
+
+    return 'Exposure done'
+
+def temp_exp(power, temp, current, filename, rec_before, N, Tset, Trange, rec_after, dt):
+    state = 'BEFORE'
+
+    n = 0  # iterator that stops when it reaches N
+
+    # Initially sets the time to a number divisible by the sample rate
+    time.sleep(dt - (time.time() % dt))
+    start = time.time()
+    while n < N:
+        exposing = utils.read_states()[0]
+        if not exposing:
+            return "Experiment stopped"
+
+        measure(filename, start, power, temp, state=state)
+        # Read latest temperature
+        with open(filename, 'r') as f:
+            last_line = f.read().splitlines()[-1]
+            Tlast = float(last_line.split('\t')[-2])
+
+        # Initiate next temperature measurements
+        temp.initiate()
+
+        if (time.time() - start) > rec_before - 0.1 and state == 'BEFORE':
+            state = 'EXPOSING'
+            power.set(V=45, I=current)
+            power.set_output('ON')
+
+        if Tlast>(Tset+Trange) and state == 'EXPOSING':  # 0.1 s to account for small drifts
+            n += 1
+
+            # Changing state
+            state = 'WAIT'
+
+            # Sets output to 0V and 0A and output to off
+            power.set_default()
+
+        if Tlast < (Tset - Trange) and state == 'WAIT':
+            state = 'EXPOSING'
+            power.set(V=45, I=current)
+            power.set_output('ON')
+
+        time.sleep(dt - (time.time() % dt))
+
+    time.sleep(dt - (time.time() % dt))
+    after_timer = time.time()
+    while (time.time()-after_timer) < rec_after:
+        exposing = utils.read_states()[0]
+        if not exposing:
+            return "Experiment stopped"
+
+        measure(filename, start, power, temp, state=state)
+        # Initiate next temperature measurements
+        temp.initiate()
+        time.sleep(dt - (time.time() % dt))
+
+    return 'Exposure done'

@@ -171,8 +171,12 @@ class PowerSupply():
 
 
 class fiber():
-    def __init__(self, port):
-        self.transmitter = osensapy.Transmitter(port, 247, baudrate=115200)
+    '''
+    id = 247 single channel transmitter
+    id = 40  triple channel transmitter
+    '''
+    def __init__(self, port, id=40):
+        self.transmitter = osensapy.Transmitter(port, id, baudrate=115200)
 
     def __len__(self):
         return 1
@@ -182,7 +186,7 @@ class fiber():
         pass
     
     def get_T(self):
-        return [self.transmitter.read_channel_temp('A')]
+        return [reading[1] for reading in self.transmitter.fast_batch(3)]
         
         
     def reinitialize(self):

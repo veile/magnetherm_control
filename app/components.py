@@ -198,7 +198,7 @@ def tabs():
                      children=[
                          dcc.Tab(label="Tuning", value='tab_1', children=tuning()),
                          dcc.Tab(label="Exposure", value='tab_2', children=exposure()),
-                         # dcc.Tab(label="On-Off Exp", value='tab_3', children=exp_onoff())
+                         dcc.Tab(label="Temperature", value='tab_3', children=temperature_exp())
                 ]
             ),
             html.Div(id='tab_content')
@@ -286,7 +286,7 @@ def exposure():
         },
         children=[
             dcc.ConfirmDialog(
-                id='confirm_exposure',
+                id='confirm_exposure_exp',
                 message='Sure you want to expose?',
             ),
             html.Div(
@@ -371,115 +371,103 @@ def exposure():
                         type="circle"),
                 ]
             ),
-            # html.Div(
-            #     style={'width': '50%',
-            #            # 'display': 'inline-block',
-            #            'padding-left': '10px',
-            #            },
-            #     children=[
-            #
-            #         html.Button("Start", id="exp_button", style={'width': '200px'},
-            #                     n_clicks=0, disabled=False),
-            #         # dbc.Progress(id="progress_expose", value=0, striped=True, animated=True),
-            #         dcc.Loading(
-            #             id="exposing",
-            #             children=[html.Div(id='expose_div')],
-            #             type="circle")
-            #     ]
-            # )
         ],
     )
 
-
-# def exp_onoff():
-#     return html.Div(
-#         style={
-#             'width': '100%'
-#         },
-#         children=[
-#             dcc.ConfirmDialog(
-#                 id='confirm_onoff',
-#                 message='Sure you want to expose?',
-#             ),
-#             html.Div(
-#                 style={
-#                     'width': '25%',
-#                     # 'float': 'left',
-#                     'display': 'inline-block',
-#                     'padding': '20px',
-#                 },
-#                 children=[
-#                     html.Label("Power Supply Current [A]"),
-#                     dcc.Input(
-#                         id="exp_current_onoff", type='number', placeholder='',
-#                         style={'width': '200px'}, persistence=True, value=0, debounce=True
-#                     ),
-#                     html.Br(), html.Br(),
-#                     html.Label("Exposure Field [mT]"),
-#                     dcc.Input(
-#                         id="exp_field_onoff", type='number',
-#                         style={'width': '200px'}, persistence=True, value=0, debounce=True
-#                     ),
-#                     html.Br(), html.Br(),
-#                 ]
-#             ),
-#             html.Div(
-#                 style={'width': '25%',
-#                        'display': 'inline-block',
-#                        'padding': '20px',
-#                        },
-#                 children=[
-#                     html.Label("Record before exposure [s]"),
-#                     dcc.Input(
-#                         id="rec_before_onoff", type='number',
-#                         style={'width': '200px'}, persistence=True, value=60
-#                     ),
-#                     html.Br(), html.Br(),
-#                     html.Label("On Time [s]"),
-#                     dcc.Input(
-#                         id="ontime_onoff", type='number', placeholder='',
-#                         style={'width': '200px'}, persistence=True, value=10
-#                     ),
-#                     html.Br(), html.Br(),
-#                 ]
-#             ),
-#             html.Div(
-#                 style={'width': '25%',
-#                        'display': 'inline-block',
-#                        'padding': '20px',
-#                        },
-#                 children=[
-#                     html.Label('Number of steps'),
-#                     dcc.Input(
-#                         id="steps_onoff", type='number',
-#                         style={'width': '200px'}, persistence=True, value=10
-#                     ),
-#                     html.Br(), html.Br(),
-#                     html.Label('Off time [s]'),
-#                     dcc.Input(
-#                         id="offtime_onoff", type='number',
-#                         style={'width': '200px'}, persistence=True, value=3
-#                     ),
-#                     html.Br(), html.Br(),
-#                 ]
-#             ),
-#             html.Div(
-#                 style={'width': '50%',
-#                        # 'display': 'inline-block',
-#                        'padding-left': '240px',
-#                        },
-#                 children=[
-#                     html.Button("Start", id="exp_button_onoff", style={'width': '200px'},
-#                                 n_clicks=0, disabled=False),
-#                     dcc.Loading(
-#                        id="exposing_onoff",
-#                        children=[html.Div(id='expose_div_onoff')],
-#                        type="circle")
-#                 ]
-#             )
-#         ]
-#     )
-
+def temperature_exp():
+    return html.Div(
+        style={
+            'width': '100%',
+        },
+        children=[
+            dcc.ConfirmDialog(
+                id='confirm_exposure_temp',
+                message='Sure you want to expose?',
+            ),
+            html.Div(
+                style={
+                    'width': '25%',
+                    # 'float': 'left',
+                    'display': 'inline-block',
+                    'padding': '20px',
+                },
+                children=[
+                    html.Label("Power Supply Current [A]"),
+                    dcc.Input(
+                        id="temp_current", type='number', placeholder='',
+                        style={'width': '100%'}, persistence=True, value=0, debounce=True
+                    ),
+                    html.Br(), html.Br(),
+                    html.Label("Exposure Field [mT]"),
+                    dcc.Input(
+                        id="temp_field", type='number',
+                        style={'width': '100%'}, persistence=True, value=0, debounce=True
+                    ),
+                    html.Br(), html.Br(),
+                    html.Label("dt [s]"),
+                    dcc.Input(
+                        id="temp_sample_rate", type='number',
+                        style={'width': '100%'}, persistence=True, value=0, debounce=True
+                    ),
+                    html.Br(), html.Br(),
+                ]
+            ),
+            html.Div(
+                style={'width': '25%',
+                       'display': 'inline-block',
+                       'padding': '20px',
+                       },
+                children=[
+                    html.Label("Record Before [s]"),
+                    dcc.Input(
+                        id="temp_rec_before", type='number',
+                        style={'width': '100%'}, persistence=True, value=30
+                    ),
+                    html.Br(), html.Br(),
+                    html.Label("Record After [s]"),
+                    dcc.Input(
+                        id="temp_rec_after", type='number', placeholder='',
+                        style={'width': '100%'}, persistence=True, value=60
+                    ),
+                    html.Br(), html.Br(),
+                    html.Label('Number of Steps'),
+                    dcc.Input(
+                        id="temp_no_steps", type='number',
+                        style={'width': '100%'}, persistence=True, value=180
+                    ),
+                    html.Br(), html.Br()
+                ]
+            ),
+            html.Div(
+                style={'width': '25%',
+                       'display': 'inline-block',
+                       'padding': '20px',
+                       },
+                children=[
+                    html.Label('Set Temperature [℃]'),
+                    dcc.Input(
+                        id="set_temperature", type='number',
+                        style={'width': '100%'}, persistence=True, value=35
+                    ),
+                    html.Br(), html.Br(),
+                    html.Label('Temperature Range [℃]'),
+                    dcc.Input(
+                        id="temperature_range", type='number',
+                        style={'width': '100%'}, persistence=True, value=4
+                    ),
+                    html.Br(), html.Br(), html.Br(),
+                    html.Button("Start", id="temp_button", style={'width': '100%'},
+                                n_clicks=0, disabled=False),
+                    # dbc.Progress(id="progress_expose", value=0, striped=True, animated=True),
+                    html.Br(),
+                    dcc.Loading(
+                        id="temp_exposing",
+                        children=[html.Div(id='temperature_exp_div')],
+                        type="circle"),
+                ]
+            ),
+        ]
+    )
 
 def files_list():
     data = get_files()
