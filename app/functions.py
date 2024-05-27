@@ -57,8 +57,10 @@ def time_exp(power, temp, current, filename, rec_before, N, on_time, off_time, r
 
             # Sets output to 0V and 0A and output to off
             power.set_default()
+        if (rec_before+N*(on_time+off_time)-0.1) > (time.time() - start) >\
+           (rec_before + n * (on_time + off_time) - 0.1) and state == 'WAIT':
 
-        if (time.time() - start) > (rec_before + n * (on_time + off_time) - 0.1) and state == 'WAIT':
+#        if (time.time() - start) > (rec_before + n * (on_time + off_time) - 0.1) and state == 'WAIT':
             state = 'EXPOSING'
             power.set(V=45, I=current)
             power.set_output('ON')
