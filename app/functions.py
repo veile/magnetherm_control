@@ -93,7 +93,7 @@ def temp_exp(power, temp, current, filename, rec_before, N, Tset, Trange, rec_af
         # Read latest temperature
         with open(filename, 'r') as f:
             last_line = f.read().splitlines()[-1]
-            Tlast = float(last_line.split('\t')[-2])
+            Tlast = float(last_line.split('\t')[3])
 
         # Initiate next temperature measurements
         temp.initiate()

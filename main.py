@@ -24,10 +24,10 @@ import app.utils as utils
 import app.functions as func
 
 # Debugging mode
-# PowerSupply = dummy_PowerSupply
-# ToneGenerator = dummy_ToneGenerator
-# TC = dummy_TC
-# fiber = dummy_fiber
+PowerSupply = dummy_PowerSupply
+ToneGenerator = dummy_ToneGenerator
+TC = dummy_TC
+fiber = dummy_fiber
 # --------------
 
 global tone
@@ -71,7 +71,7 @@ index_page = html.Div(
                      style={'textAlign': 'center'}),
         html.Div(style={'textAlign': 'center'}, children=[comp.stop()]),
         # html.Br(),
-        dcc.Link('Go to data', href='/data'),
+        html.A('Go to data', href='/data', target='_blank'),
         # html.Div(dcc.Markdown(utils.current_state(), id='current_state') ),
         html.Br(),
         html.Div(style={'width': '100%'},
@@ -244,17 +244,36 @@ def stop_exposure(n):
 
 @app.callback(
     Output('filename-input', 'style'),
-    Input('filename-input', 'value')
+    Input('filename-input', 'value'),
+    State('experiment-folder', 'value')
 )
-def display_overwrite(filename):
+def display_overwrite(filename, folder):
     if filename is None:
         raise dash.exceptions.PreventUpdate
 
-    if os.path.exists('data/'+filename+'.txt'):
+    if folder is None:
+        folder = ''
+
+    folder = os.path.join('data', folder)
+    file = os.path.join(folder, filename+'.txt')
+    if os.path.exists(file):
         return {'color': 'red'}
     else:
         return {'color': 'green'}
 
+@app.callback(
+    Output('experiment-folder', 'options'),
+    Input('new-experiment-btn', 'n_clicks'),
+    State('filename-input', 'value')
+)
+def create_new_experiment(clicks, fname):
+    if clicks is None:
+        raise dash.exceptions.PreventUpdate
+
+    path = os.path.join('data', fname)
+    os.makedirs(path)
+
+    return utils.get_data_folders()
 
 # -------------------------------------------------------------------------------------------------------------------
 @app.callback(
@@ -263,14 +282,19 @@ def display_overwrite(filename):
     Input('tune_button', 'n_clicks'),
     [State('coil_type', 'value'),
      State('cap_type', 'value'),
-     State('filename-input', 'value')]
+     State('filename-input', 'value'),
+     State('experiment-folder', 'value')]
 )
-def confirm_tuning(clicks, coil, cap, filename):
+def confirm_tuning(clicks, coil, cap, filename, folder):
     if clicks == 0:
         raise dash.exceptions.PreventUpdate
 
     overwrite_msg = ''
-    filename = 'data/' + filename + '.txt'
+
+    if folder is None:
+        folder = ''
+
+    filename = os.path.join('data', folder, filename+".txt")
     if os.path.exists(filename):
         overwrite_msg = 'FILE ALREADY EXISTS!\n'
 
@@ -291,15 +315,18 @@ def start_tune_graphing(n, n_ints):
 @app.callback(
     Output('tune_graph', 'figure'),
     Input('tune_interval', 'n_intervals'),
-    State('filename-input', 'value')
+    State('filename-input', 'value'),
+    State('experiment-folder', 'value')
 )
-def update_tune_graph(n, filename):
+def update_tune_graph(n, filename, folder):
     if n is None:
         raise dash.exceptions.PreventUpdate
     if filename is None:
         raise dash.exceptions.PreventUpdate
 
-    filename = 'data/' + filename + ".txt"
+    if folder is None:
+        folder=''
+    filename = os.path.join('data', folder, filename+".txt")
 
     try:
         df = pd.read_csv(filename, sep='\t')
@@ -338,9 +365,10 @@ def update_tune_graph(n, filename):
      State('freq_high', 'value'),
      State('coil_type', 'value'),
      State('cap_type', 'value'),
+     State('experiment-folder', 'value'),
      State('filename-input', 'value')]
 )
-def tune(max_ints, flow, fhigh, coil, cap, filename):
+def tune(max_ints, flow, fhigh, coil, cap, folder, filename):
     global tone, power, fres
     if max_ints == 0:
         return "Click tune to tune system"
@@ -362,9 +390,13 @@ def tune(max_ints, flow, fhigh, coil, cap, filename):
 
     utils.write_state('exposing', True)
 
-    filename = 'data/' + filename + '.txt'
+    if folder is None:
+        folder = ''
+    filename = os.path.join('data', folder, filename + ".txt")
 
-    t_header = "\t".join(['T%i [degC]' % i for i in range(len(temp))])
+
+    N_T = len(temp.get_T())
+    t_header = "\t".join(['T%i [degC]' % i for i in range(N_T)])
     header = 'Frequency [Hz]\tCurrent [A]\tVoltage [V]\t' + t_header
     with open(filename, 'w') as file:
         file.write(header + "\n")
@@ -486,14 +518,18 @@ def field_to_current(exp_field, temp_field, config):
     Input('exp_button', 'n_clicks'),
     [State('exp_current', 'value'),
      State('exp_field', 'value'),
-     State('filename-input', 'value')]
+     State('filename-input', 'value'),
+     State('experiment-folder', 'value')]
 )
-def confirm_exposure_exp(clicks, current, field, filename):
+def confirm_exposure_exp(clicks, current, field, filename, folder):
     if clicks == 0:
         raise dash.exceptions.PreventUpdate
 
     overwrite_msg = ''
-    filename = 'data/' + filename + '.txt'
+
+    if folder is None:
+        folder = ''
+    filename = os.path.join('data', folder, filename+".txt")
     if os.path.exists(filename):
         overwrite_msg = 'FILE ALREADY EXISTS!\n'
 
@@ -506,14 +542,18 @@ def confirm_exposure_exp(clicks, current, field, filename):
     Input('temp_button', 'n_clicks'),
     [State('temp_current', 'value'),
      State('temp_field', 'value'),
-     State('filename-input', 'value')]
+     State('filename-input', 'value'),
+     State('experiment-folder', 'value')]
 )
-def confirm_exposure_temp(clicks, current, field, filename):
+def confirm_exposure_temp(clicks, current, field, filename, folder):
     if clicks == 0:
         raise dash.exceptions.PreventUpdate
 
     overwrite_msg = ''
-    filename = 'data/' + filename + '.txt'
+
+    if folder is None:
+        folder = ''
+    filename = os.path.join('data', folder, filename+".txt")
     if os.path.exists(filename):
         overwrite_msg = 'FILE ALREADY EXISTS!\n'
 
@@ -559,9 +599,11 @@ def start_exp_graphing(click_temp, click_exp, n_ints, rec_before, rec_after, N, 
 @app.callback(
     Output('exp_graph', 'figure'),
     Input('exp_interval', 'n_intervals'),
-    State('filename-input', 'value')
+    State('filename-input', 'value'),
+    State('experiment-folder', 'value'),
+    State('update-graph', 'on')
 )
-def update_exp_graph(n, filename):
+def update_exp_graph(n, filename, folder, update):
     if n is None:
         raise dash.exceptions.PreventUpdate
     if filename is None:
@@ -569,7 +611,12 @@ def update_exp_graph(n, filename):
     if temp is None:
         raise dash.exceptions.PreventUpdate
 
-    filename = 'data/' + filename + ".txt"
+    if not update:
+        raise dash.exceptions.PreventUpdate
+
+    if folder is None:
+        folder = ''
+    filename = os.path.join('data', folder, filename+".txt")
 
     try:
         df = pd.read_csv(filename, sep='\t', comment='#')
@@ -600,6 +647,7 @@ def update_exp_graph(n, filename):
      State('rec_after', 'value'),
      State('exp_current', 'value'),
      State('filename-input', 'value'),
+     State('experiment-folder', 'value'),
      State('sample_rate', 'value'),
      State('no_steps', 'value'),
      State('temp_current', 'value'),
@@ -610,7 +658,7 @@ def update_exp_graph(n, filename):
      State('temp_rec_after', 'value'),
      State('temp_no_steps', 'value')],
 )
-def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, current, filename, dt, N,
+def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, current, filename, folder, dt, N,
            temp_current, temp_dt, Tset, Trange, temp_before, temp_after, temp_N):
 
     global power, tone
@@ -650,11 +698,14 @@ def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, curr
     except:
         return "Input valid number at current"
 
-    filename = 'data/' + filename + '.txt'
+    if folder is None:
+        folder = ''
+    filename = os.path.join('data', folder, filename+".txt")
 
     props = """#Resonance Frequency: %.3f Hz\n#Set Current: %.2f A\n""" % (fres, current)
 
-    t_header = "\t".join(['T%i [degC]' % i for i in range(len(temp))])
+    N_T = len(temp.get_T())
+    t_header = "\t".join(['T%i [degC]' % i for i in range(N_T)])
     header = 'Time [s]\tCurrent [A]\tVoltage [V]\t' + t_header + "\tState"
     with open(filename, 'w') as file:
         file.write(props + header + "\n")

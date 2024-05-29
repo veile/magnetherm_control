@@ -415,8 +415,11 @@ class dummy_fiber():
         return 1
 
     def get_T(self):
-        T = [random.randint(50, 100)]
+        T = [random.randint(50, 100), random.randint(50, 100)]
         return T
+
+    def initiate(self):
+        pass
 
 class dummy_TC():
         """

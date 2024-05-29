@@ -111,3 +111,6 @@ def write_state(select, new_state):
 
     with open('state.txt', 'w') as f:
         f.write(lines[0]+'\n'+lines[1])
+
+def get_data_folders():
+    return next(os.walk('data'))[1]

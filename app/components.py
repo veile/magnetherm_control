@@ -7,7 +7,7 @@ from dash_dual_listbox import DualList
 from dash.dash_table import DataTable
 
 from app import colors
-from app.utils import get_files, get_devices
+from app.utils import get_files, get_devices, get_data_folders
 
 from datetime import datetime
 
@@ -29,7 +29,7 @@ def com_inputs():
     options = []
     return html.Div(
         style={'width' : '20%',
-               'height': 270,
+               'height': 305,
                'padding': '20px',
                'marginRight': 5,
                'float': 'left',
@@ -111,12 +111,15 @@ def temp_options():
                     'padding': '20px',
                     'marginLeft': 5,
                     'marginRight': 5,
-                    'height': 45
+                    'height': 80
                 },
                 children=[
-                    html.Label("Filename (.txt)"),
+                    html.Label("Experiment and filename (.txt)"),
+                    dcc.Dropdown(get_data_folders(), id='experiment-folder', placeholder='Select Experiment'),
                     dcc.Input(id='filename-input', value=datetime.now().strftime('%Y-%m-%d'),
-                              debounce=True, style={'width': '90%'})
+                              debounce=True, style={'width': '90%'}),
+                    html.Button('New', id='new-experiment-btn')
+
                 ]
             )
         ]
@@ -168,6 +171,8 @@ def graph():
             dcc.Interval(id='exp_interval', interval=1000, n_intervals=0),
             dcc.Graph(id='tune_graph', animate=False, style={'height': 315}),
             html.Br(),
+            daq.BooleanSwitch(label='Update Graph', labelPosition='top', id='update-graph', on=True,
+                              style={'marginRight': '90%'}),
             dcc.Graph(id='exp_graph', animate=False, style={'height': 315})
         ]
     )
