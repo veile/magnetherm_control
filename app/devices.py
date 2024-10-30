@@ -179,7 +179,7 @@ class fiber():
         self.transmitter = osensapy.Transmitter(port, id, baudrate=115200)
 
     def __len__(self):
-        return 1
+        return 3
 
     def initiate(self):
     # Compability between TC and fibre
