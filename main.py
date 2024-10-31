@@ -24,10 +24,10 @@ import app.utils as utils
 import app.functions as func
 
 # Debugging mode
-# PowerSupply = dummy_PowerSupply
-# ToneGenerator = dummy_ToneGenerator
-# TC = dummy_TC
-# fiber = dummy_fiber
+PowerSupply = dummy_PowerSupply
+ToneGenerator = dummy_ToneGenerator
+TC = dummy_TC
+fiber = dummy_fiber
 # --------------
 
 global tone
@@ -67,6 +67,7 @@ index_page = html.Div(
         'backgroundColor': colors['background']
     },
     children=[
+
         dcc.Markdown('# Magnetherm Dashboard', id='header',
                      style={'textAlign': 'center'}),
         html.Div(style={'textAlign': 'center'}, children=[comp.stop()]),
@@ -82,6 +83,15 @@ index_page = html.Div(
                      comp.graph(),
                  ]),
         comp.tabs(),
+        dcc.ConfirmDialog(
+            id='confirm_overwrite_tune',
+            message='This will overwrite existing data!',
+        ),
+        dcc.ConfirmDialog(
+            id='confirm_overwrite_exp',
+            message='This will overwrite existing data!',
+        ),
+        dcc.Store(id='store_exp_interval')
     ]
 )
 
@@ -262,31 +272,37 @@ def display_overwrite(filename):
      Output('confirm_tuning', 'message')],
     Input('tune_button', 'n_clicks'),
     [State('coil_type', 'value'),
-     State('cap_type', 'value'),
-     State('filename-input', 'value')]
+     State('cap_type', 'value')]
 )
-def confirm_tuning(clicks, coil, cap, filename):
+def confirm_tuning(clicks, coil, cap):
     if clicks == 0:
         raise dash.exceptions.PreventUpdate
 
-    overwrite_msg = ''
+    return True, "Make sure that the coil has %s turns and the capacitor is at %s" % (str(coil), str(cap))
+
+@app.callback(
+    [Output('tune_interval', 'max_intervals', allow_duplicate=True),
+     Output('confirm_overwrite_tune', 'displayed')],
+    Input('confirm_tuning', 'submit_n_clicks'),
+    State('tune_interval', 'n_intervals'),
+    State('filename-input', 'value'),
+    prevent_initial_call=True
+)
+def start_tune_graphing(n, n_ints, filename):
     filename = 'data/' + filename + '.txt'
     if os.path.exists(filename):
-        overwrite_msg = 'FILE ALREADY EXISTS!\n'
+        return dash.no_update, True
 
-    return True, overwrite_msg+"Make sure that the coil has %s turns and the capacitor is at %s" % (str(coil), str(cap))
-
+    return n_ints + 20, False
 
 @app.callback(
     Output('tune_interval', 'max_intervals'),
-    Input('confirm_tuning', 'submit_n_clicks'),
-    State('tune_interval', 'n_intervals')
+    Input('confirm_overwrite_tune', 'submit_n_clicks'),
+    State('tune_interval', 'n_intervals'),
+    prevent_initial_call=True
 )
-def start_tune_graphing(n, n_ints):
-    if n is None:
-        return 0
-    return n_ints + 20
-
+def confirm_overwrite_tuning(clicks, n_ints):
+    return n_ints+20
 
 @app.callback(
     Output('tune_graph', 'figure'),
@@ -327,6 +343,7 @@ def update_tune_graph(n, filename):
     fig.update_traces(mode='lines+markers')
     fig.update_xaxes()
     fig.update_yaxes()
+    fig.update_layout(template='plotly_white', margin={'t':25,'l':10,'b':10,'r':5})
 
     return fig
 
@@ -485,20 +502,11 @@ def field_to_current(exp_field, temp_field, config):
      Output('confirm_exposure_exp', 'message')],
     Input('exp_button', 'n_clicks'),
     [State('exp_current', 'value'),
-     State('exp_field', 'value'),
-     State('filename-input', 'value')]
+     State('exp_field', 'value')],
+    prevent_initial_call=True
 )
-def confirm_exposure_exp(clicks, current, field, filename):
-    if clicks == 0:
-        raise dash.exceptions.PreventUpdate
-
-    overwrite_msg = ''
-    filename = 'data/' + filename + '.txt'
-    if os.path.exists(filename):
-        overwrite_msg = 'FILE ALREADY EXISTS!\n'
-
-    return True, overwrite_msg+"Expose the sample with %s A (%s mT)?" % (str(current), str(field))
-
+def confirm_exposure_exp(clicks, current, field):
+    return True, "Expose the sample with %s A (%s mT)?" % (str(current), str(field))
 
 @app.callback(
     [Output('confirm_exposure_temp', 'displayed'),
@@ -506,22 +514,16 @@ def confirm_exposure_exp(clicks, current, field, filename):
     Input('temp_button', 'n_clicks'),
     [State('temp_current', 'value'),
      State('temp_field', 'value'),
-     State('filename-input', 'value')]
+     State('filename-input', 'value')],
+    prevent_initial_call=True
 )
 def confirm_exposure_temp(clicks, current, field, filename):
-    if clicks == 0:
-        raise dash.exceptions.PreventUpdate
-
-    overwrite_msg = ''
-    filename = 'data/' + filename + '.txt'
-    if os.path.exists(filename):
-        overwrite_msg = 'FILE ALREADY EXISTS!\n'
-
-    return True, overwrite_msg+"Expose the sample with %s A (%s mT)?" % (str(current), str(field))
-
+    return True, "Expose the sample with %s A (%s mT)?" % (str(current), str(field))
 
 @app.callback(
-    Output('exp_interval', 'max_intervals'),
+    [Output('store_exp_interval', 'data'),
+     Output('exp_interval', 'max_intervals', allow_duplicate=True),
+     Output('confirm_overwrite_exp', 'displayed')],
     [Input('confirm_exposure_temp', 'submit_n_clicks'),
      Input('confirm_exposure_exp', 'submit_n_clicks')],
     [State('exp_interval', 'n_intervals'),
@@ -532,29 +534,44 @@ def confirm_exposure_temp(clicks, current, field, filename):
      State('off_time', 'value'),
      State('temp_rec_before', 'value'),
      State('temp_rec_after', 'value'),
-     State('temp_no_steps', 'value')]
+     State('temp_no_steps', 'value'),
+     State('filename-input', 'value')],
+    prevent_initial_call=True
 )
 def start_exp_graphing(click_temp, click_exp, n_ints, rec_before, rec_after, N, on_time, off_time, temp_before,
-                       temp_after, temp_N):
-    if ctx.triggered_id is None:
-        dash.exceptions.PreventUpdate
-
+                       temp_after, temp_N, filename):
     id = ctx.triggered_id
 
     if id == 'confirm_exposure_exp':
         if not all(isinstance(x, int) for x in [N, rec_before, rec_after, on_time, off_time]):
-            return 0
+            return dash.no_update,  dash.no_update, False
         else:
-            return n_ints + rec_before + N * (on_time+off_time) + rec_after + 5  # 5 sec buffer
+            n_ints_new = n_ints + rec_before + N * (on_time + off_time) + rec_after + 5  # 5 sec buffer
 
     elif id == 'confirm_exposure_temp':
         if not all(isinstance(x, int) for x in [N, temp_before, temp_after, temp_N]):
-            return 0
+            return dash.no_update,  dash.no_update, False
         else:
-            return n_ints + temp_before + temp_N* 900 + temp_after + 5  # 5 sec buffer
+            n_ints_new = n_ints + temp_before + temp_N * 900 + temp_after + 5  # 5 sec buffer
 
     else:
-        return 0
+        return dash.no_update,  dash.no_update, False
+
+    filename = 'data/' + filename + '.txt'
+    if os.path.exists(filename):
+        return {'max-intervals': n_ints_new, 'context': id},  dash.no_update,  True
+    else:
+        return {'max-intervals': n_ints_new, 'context': id}, n_ints_new, False
+
+@app.callback(
+    Output('exp_interval', 'max_intervals'),
+    Input('confirm_overwrite_exp', 'submit_n_clicks'),
+    [State('store_exp_interval', 'data')],
+    prevent_initial_call=True
+)
+def confirm_overwrite_exp(clicks, data):
+    return data['max-intervals']
+
 
 @app.callback(
     Output('exp_graph', 'figure'),
@@ -576,25 +593,29 @@ def update_exp_graph(n, filename):
 
     except:
         raise dash.exceptions.PreventUpdate
-
     x = 'Time [s]'
     ys = [y for y in df.columns if y.startswith('T')]
-    # ys = "\t".join(['T%i [degC]' % i for i in range(len(temp))])
-    fig = px.scatter(df, x, y=ys)
+    ys = [f'T{i} [degC]' for i in range(len(temp))]
+    data = [go.Scatter(x=df[x], y=df[y], name=y[:2], mode='lines+markers') for y in ys]
 
-    fig.update_traces(mode='lines+markers')
-    fig.update_xaxes(autorange=True)
-    fig.update_yaxes(title_text='Temperature [degC]')
-
-    return fig
+    return {
+        'data': data,
+        'layout': {
+            'template': 'plotly_white',
+            'margin': {'t': 25, 'l': 30, 'b': 30, 'r': 5},
+            'uirevision': True,
+        }
+    }
 
 
 @app.callback(
     [Output('expose_div', 'children'),
      Output('temperature_exp_div', 'children')],
-    [Input('confirm_exposure_exp', 'submit_n_clicks'),
-     Input('confirm_exposure_temp', 'submit_n_clicks')],
-    [State('on_time', 'value'),
+    # [Input('confirm_exposure_exp', 'submit_n_clicks'),
+    #  Input('confirm_exposure_temp', 'submit_n_clicks')]
+    Input('exp_interval', 'max_intervals'),
+    [State('store_exp_interval', 'data'),
+     State('on_time', 'value'),
      State('off_time', 'value'),
      State('rec_before', 'value'),
      State('rec_after', 'value'),
@@ -610,15 +631,16 @@ def update_exp_graph(n, filename):
      State('temp_rec_after', 'value'),
      State('temp_no_steps', 'value')],
 )
-def expose(exp_click, temp_click, on_time, off_time, rec_before, rec_after, current, filename, dt, N,
+def expose(maxints, data, on_time, off_time, rec_before, rec_after, current, filename, dt, N,
            temp_current, temp_dt, Tset, Trange, temp_before, temp_after, temp_N):
 
     global power, tone
 
-    id = ctx.triggered_id if not None else 'No clicks'
-    if id is None:
+
+    if data is None:
         return "Click to start exposure", "Click to start exposure"
 
+    id = data['context']
     def return_select(msg, id):
         if id == 'confirm_exposure_exp':
             return msg, "Click to start exposure"

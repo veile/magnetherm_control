@@ -412,10 +412,14 @@ class dummy_fiber():
         self.port = port
 
     def __len__(self):
-        return 1
+        return 3
+
+    def initiate(self):
+    # Compability between TC and fibre
+        pass
 
     def get_T(self):
-        T = [random.randint(50, 100)]
+        T = [random.randint(50, 100) for i in range(3)]
         return T
 
 class dummy_TC():

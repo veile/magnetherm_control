@@ -20,8 +20,8 @@ from datetime import datetime
 # def tune_interval():
 #     return dcc.Interval(id='tune_interval', interval=1e3)
 
-def exp_interval():
-    return dcc.Interval(id='exp_interval', interval=1e3, disabled=True)
+# def exp_interval():
+#     return dcc.Interval(id='exp_interval', interval=1e3, disabled=True)
 
 def com_inputs():
     # options_list = get_devices()
@@ -164,11 +164,11 @@ def graph():
             'textAlign': 'center',
         },
         children=[
-            dcc.Interval(id='tune_interval', interval=1000, n_intervals=0),
-            dcc.Interval(id='exp_interval', interval=1000, n_intervals=0),
+            dcc.Interval(id='tune_interval', interval=1000, n_intervals=0, max_intervals=0),
+            dcc.Interval(id='exp_interval', interval=1000, n_intervals=0, max_intervals=0),
             dcc.Graph(id='tune_graph', animate=False, style={'height': 315}),
             html.Br(),
-            dcc.Graph(id='exp_graph', animate=False, style={'height': 315})
+            dcc.Graph(id='exp_graph',  animate=False, style={'height': 315})
         ]
     )
 
